@@ -663,8 +663,30 @@ export default function Game() {
           </ul>
           <Button className="mt-2 bg-orange-500 hover:bg-orange-600 text-white"
                onClick={() => {
-               setMpOpen(false);
-               setQueueOpen(true);
+  setMpOpen(false);
+  setQueueOpen(true);
+
+  const wsUrl =
+    process.env.REACT_APP_BACKEND_URL
+      .replace("https://", "wss://")
+      .replace("http://", "ws://") + "/ws/matchmaking";
+
+  const socket = new WebSocket(wsUrl);
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "room_joined") {
+      setMatchRoom(data.roomId);
+      setMatchSide(data.side);
+      setQueueOpen(false);
+    }
+  };
+
+  socket.onerror = () => {
+    console.error("WebSocket connection failed");
+  };
+}}
            }}      
      data-testid="multiplayer-find-match"
             >
