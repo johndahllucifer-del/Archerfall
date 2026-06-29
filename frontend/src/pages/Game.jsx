@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock, Medal, Flame, Swords } from "lucide-react";
+import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock, Medal, Flame, Swords, HeartHandshake } from "lucide-react";
 import {
   createInitialState,
   resetForNewGame,
@@ -22,6 +22,9 @@ import { drawScene } from "@/game/render";
 import { initAudio, setSoundEnabled, sounds } from "@/game/sounds";
 import { BOWS, ITEMS } from "@/game/shop";
 import { submitScore, fetchLeaderboard, getPlayerName, setPlayerName } from "@/services/leaderboard";
+import { COIN_PACKS, SUPPORT_TIERS, startCoinCheckout, startSupportCheckout, pollCheckout } from "@/services/payments";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 const HIGH_SCORE_KEY = "archery_high_score_v1";
 
@@ -119,6 +122,69 @@ export default function Game() {
   useEffect(() => {
     refreshLeaderboard();
   }, [refreshLeaderboard]);
+
+  // Handle return from Stripe Checkout: poll, then credit coins locally if applicable
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get("session_id");
+    const purpose = params.get("payment");
+    if (!sid) return;
+    // Clean URL so we don't re-process on remounts
+    window.history.replaceState({}, "", window.location.pathname);
+    (async () => {
+      toast.loading("Confirming your payment…", { id: "pay" });
+      const res = await pollCheckout(sid);
+      if (res.ok) {
+        if (purpose === "coins" && res.coins_credited > 0) {
+          const st = stateRef.current;
+          if (st) {
+            st.coins += res.coins_credited;
+            // Persist new coin balance to localStorage
+            try {
+              localStorage.setItem("archery_coins_v1", String(st.coins));
+            } catch (e) { /* ignore */ }
+            forceUpdate();
+          }
+          toast.success(`+${res.coins_credited} coins added!`, { id: "pay" });
+          sounds.powerUp();
+        } else if (purpose === "support") {
+          toast.success("Thanks for the support 💛", { id: "pay" });
+          sounds.levelUp();
+        } else {
+          toast.success("Payment confirmed!", { id: "pay" });
+        }
+      } else {
+        toast.error("Payment not completed.", { id: "pay" });
+      }
+    })();
+  }, [forceUpdate]);
+
+  const buyCoinPack = async (pack) => {
+    if (paying) return;
+    if (!playerName) { toast.error("Set your name first"); return; }
+    try {
+      setPaying(true);
+      const { url } = await startCoinCheckout(pack.id, playerName);
+      window.location.href = url;
+    } catch (e) {
+      console.error(e);
+      toast.error("Couldn't start checkout");
+      setPaying(false);
+    }
+  };
+
+  const sendSupport = async ({ tierId, customAmount }) => {
+    if (paying) return;
+    try {
+      setPaying(true);
+      const { url } = await startSupportCheckout({ tierId, customAmount });
+      window.location.href = url;
+    } catch (e) {
+      console.error(e);
+      toast.error("Couldn't start support checkout");
+      setPaying(false);
+    }
+  };
 
   // Keyboard shortcuts: Space=pause, R=restart, S=shop, L=leaderboard, Esc closes dialogs
   useEffect(() => {
@@ -303,6 +369,24 @@ export default function Game() {
               <Coins className="w-4 h-4 text-amber-600" />
               <span className="font-mono-game text-sm font-bold text-amber-700">{state?.coins ?? 0}</span>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-amber-50 border-amber-300 text-amber-800 btn-press hidden sm:inline-flex"
+              onClick={() => { sounds.click(); setCoinShopOpen(true); }}
+              data-testid="open-coinshop-button"
+            >
+              <Coins className="w-4 h-4 mr-1" /> Get Coins
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-rose-50 border-rose-300 text-rose-700 btn-press hidden sm:inline-flex"
+              onClick={() => { sounds.click(); setSupportOpen(true); }}
+              data-testid="open-support-button"
+            >
+              <HeartHandshake className="w-4 h-4 mr-1" /> Support
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -563,6 +647,118 @@ export default function Game() {
           </Button>
         </DialogContent>
       </Dialog>
+      <Dialog open={coinShopOpen} onOpenChange={setCoinShopOpen}>
+        <DialogContent className="max-w-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border-0 shadow-2xl" data-testid="coinshop-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold text-slate-800">
+              <Coins className="w-6 h-6 text-amber-500" /> Coin Shop
+              <span className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/90 text-amber-900 text-base font-mono-game font-bold">
+                <Coins className="w-4 h-4" /> {state?.coins ?? 0}
+              </span>
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Top up instantly with a card. Coins arrive on your account the moment your payment confirms.
+              You earn 1 coin per 75 score in-game — these packs save you the grind.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid sm:grid-cols-2 gap-3 max-h-[55vh] overflow-y-auto pr-1">
+            {COIN_PACKS.map((pack) => (
+              <Card
+                key={pack.id}
+                className={`p-4 border-2 bg-white/90 ${pack.popular ? "border-orange-400" : pack.best ? "border-amber-500" : "border-slate-200/70"} relative`}
+                data-testid={`coinpack-${pack.id}`}
+              >
+                {pack.popular && (
+                  <span className="absolute -top-2 left-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-400 text-white">
+                    Most popular
+                  </span>
+                )}
+                {pack.best && (
+                  <span className="absolute -top-2 left-3 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-white">
+                    Best value
+                  </span>
+                )}
+                <div className="flex items-start gap-3">
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br from-amber-300 to-amber-500">
+                    <Coins className="w-7 h-7 text-white" strokeWidth={2.5} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold text-slate-800">{pack.label}</div>
+                    <div className="text-xs text-slate-500">{pack.tagline}</div>
+                    <div className="mt-1 font-mono-game text-xl font-extrabold text-amber-700">{pack.coins.toLocaleString()} coins</div>
+                  </div>
+                </div>
+                <Button
+                  className="mt-3 w-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold btn-press"
+                  disabled={paying || !playerName}
+                  onClick={() => buyCoinPack(pack)}
+                  data-testid={`coinpack-${pack.id}-buy`}
+                >
+                  ${pack.price.toFixed(2)}{paying ? "…" : " · Buy"}
+                </Button>
+              </Card>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2">
+            Secure card checkout via Stripe. No subscriptions, one-time purchase. Coins are non-refundable
+            once delivered.
+          </p>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
+        <DialogContent className="max-w-xl bg-gradient-to-br from-rose-50 to-pink-100 border-0 shadow-2xl" data-testid="support-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold text-slate-800">
+              <HeartHandshake className="w-6 h-6 text-rose-500" /> Support Arrow Strike
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Love the game? Throw a tip and help keep development going. Every dollar goes to new
+              bows, levels, and the upcoming multiplayer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2">
+            {SUPPORT_TIERS.map((t) => (
+              <Button
+                key={t.id}
+                variant="outline"
+                disabled={paying}
+                onClick={() => sendSupport({ tierId: t.id })}
+                className="h-auto py-3 flex-col gap-1 bg-white/80 hover:bg-rose-100 border-rose-200 btn-press"
+                data-testid={`support-tier-${t.id}`}
+              >
+                <span className="text-2xl">{t.emoji}</span>
+                <span className="text-xs text-slate-500">{t.label}</span>
+                <span className="font-mono-game font-bold text-rose-700">${t.amount}</span>
+              </Button>
+            ))}
+          </div>
+          <div className="mt-3 flex items-end gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-slate-500 block mb-1">Or a custom amount ($1 - $500)</label>
+              <Input
+                type="number"
+                min={1}
+                max={500}
+                step="0.01"
+                placeholder="e.g. 7.50"
+                value={customTip}
+                onChange={(e) => setCustomTip(e.target.value)}
+                className="bg-white"
+                data-testid="support-custom-input"
+              />
+            </div>
+            <Button
+              disabled={paying || !customTip || parseFloat(customTip) < 1}
+              onClick={() => sendSupport({ customAmount: parseFloat(customTip) })}
+              className="bg-rose-500 hover:bg-rose-600 text-white font-bold btn-press"
+              data-testid="support-custom-button"
+            >
+              <HeartHandshake className="w-4 h-4 mr-1" /> Send
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Toaster position="top-center" richColors />
     </div>
   );
 }

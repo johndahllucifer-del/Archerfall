@@ -382,11 +382,26 @@ const damageTarget = (state, target, dmg = 1) => {
     }
     spawnParticles(state, target.x, target.y, target.color || "#fbbf24", target.type === "boss" || target.type === "megaBoss" || target.type === "zeppelin" ? 36 : 16, target.type === "boss" || target.type === "megaBoss" || target.type === "zeppelin");
     if (target.type === "megaBoss") {
+      // CINEMATIC: massive shockwaves, slow-mo, guaranteed legendary drop
       state.shockwaves = state.shockwaves || [];
-      state.shockwaves.push({ x: target.x, y: target.y, r: 10, maxR: 220, life: 1, color: "#ef4444" });
-      state.shockwaves.push({ x: target.x, y: target.y, r: 4, maxR: 280, life: 1, color: "#fde68a" });
-      state.shake = Math.max(state.shake || 0, 22);
+      state.shockwaves.push({ x: target.x, y: target.y, r: 10, maxR: 260, life: 1, color: "#ef4444" });
+      state.shockwaves.push({ x: target.x, y: target.y, r: 4, maxR: 340, life: 1, color: "#fde68a" });
+      state.shockwaves.push({ x: target.x, y: target.y, r: 2, maxR: 420, life: 1, color: "#fb923c" });
+      state.shake = Math.max(state.shake || 0, 28);
       sounds.explosion();
+      // Force slow-mo for 2 seconds (cinematic)
+      state.activePowerUp = { type: "slowmo", expiresAt: performance.now() + 2000 };
+      // EPIC label
+      spawnFloatText(state, state.width / 2, state.height / 2 - 40, "EPIC TAKEDOWN!", "#fde047");
+      spawnFloatText(state, state.width / 2, state.height / 2, `+${earned}`, "#fbbf24");
+      // GUARANTEED legendary drop (explosive arrows, max ammo)
+      state.drops.push({
+        x: target.x, y: target.y, vy: 0.3, kind: "explosive", alive: true, t: 0, legendary: true,
+      });
+      // PLUS an extra bonus power-up (triple)
+      state.drops.push({
+        x: target.x + 40, y: target.y - 20, vy: 0.3, kind: "triple", alive: true, t: 0,
+      });
     } else if (target.type === "zeppelin" || target.type === "boss") {
       state.shockwaves = state.shockwaves || [];
       state.shockwaves.push({ x: target.x, y: target.y, r: 8, maxR: 140, life: 1, color: "#fde68a" });
@@ -405,7 +420,7 @@ const checkLevelUp = (state) => {
   if (state.targetsHit >= state.targetsForLevel) {
     // Award coins: based on score gained this level + level bonus
     const scoreThisLevel = state.score - state.scoreAtLevelStart;
-    state.coinsEarnedThisLevel = Math.floor(scoreThisLevel / 6) + state.level * 15;
+    state.coinsEarnedThisLevel = Math.floor(scoreThisLevel / 75) + Math.floor(state.level / 2);
     state.coins += state.coinsEarnedThisLevel;
     persistProgress(state);
 
