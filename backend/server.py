@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -309,8 +309,63 @@ async def coins_consume(payload: dict):
     new_val = max(0, int(doc.get("coins", 0)) - amount)
     await db.player_coins.update_one({"name_lc": name.lower()}, {"$set": {"coins": new_val}})
     return {"ok": True, "remaining": new_val}
- 
+    WebSocket, WebSocketDisconnect
 # Include the router in the main app
+waiting_players = []
+active_rooms = {}
+
+@app.websocket("/ws/matchmaking")
+async def matchmaking_socket(websocket: WebSocket):
+    await websocket.accept()
+
+    player_id = str(uuid.uuid4())
+    player = {
+        "id": player_id,
+        "ws": websocket
+    }
+
+    waiting_players.append(player)
+
+    try:
+        await websocket.send_json({
+            "type": "queue_joined",
+            "playerId": player_id,
+            "message": "Waiting for another player..."
+        })
+
+        if len(waiting_players) >= 2:
+            p1 = waiting_players.pop(0)
+            p2 = waiting_players.pop(0)
+            room_id = str(uuid.uuid4())
+
+            active_rooms[room_id] = {
+                "players": [p1["id"], p2["id"]]
+            }
+
+            await p1["ws"].send_json({
+                "type": "room_joined",
+                "roomId": room_id,
+                "playerId": p1["id"],
+                "side": "left",
+                "opponentId": p2["id"],
+                "message": "Opponent found!"
+            })
+
+            await p2["ws"].send_json({
+                "type": "room_joined",
+                "roomId": room_id,
+                "playerId": p2["id"],
+                "side": "right",
+                "opponentId": p1["id"],
+                "message": "Opponent found!"
+            })
+
+        while True:
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+        if player in waiting_players:
+            waiting_players.remove(player)
 app.include_router(api_router)
 
 app.add_middleware(
