@@ -332,6 +332,8 @@ async def matchmaking_socket(websocket: WebSocket):
     }
 
     waiting_players.append(player)
+    print("🟢 PLAYER CONNECTED:", player_id)
+    print("📋 QUEUE SIZE:", len(waiting_players))
 
     try:
         await websocket.send_json({
