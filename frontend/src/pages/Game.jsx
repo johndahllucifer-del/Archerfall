@@ -499,6 +499,13 @@ export default function Game() {
             onTouchCancel={onTouchEnd}
             data-testid="game-canvas"
           />
+          {matchRoom && (
+  <div className="fixed top-4 left-4 z-50 bg-black/80 text-white p-4 rounded-xl border border-green-400">
+    <div className="font-bold text-green-300">ROOM JOINED</div>
+    <div>Room: {matchRoom}</div>
+    <div>Side: {matchSide}</div>
+  </div>
+)}
 
           {/* Menu overlay */}
           {status === "menu" && (
