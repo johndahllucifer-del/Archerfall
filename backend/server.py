@@ -313,33 +313,8 @@ async def coins_consume(payload: dict):
 
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
-    body = await request.body()
-    sig = request.headers.get("Stripe-Signature")
-    stripe_checkout = _stripe_client(request)
-    event = await stripe_checkout.handle_webhook(body, sig)
-    if event.payment_status == "paid":
-        txn = await db.payment_transactions.find_one({"session_id": event.session_id})
-        if txn and txn.get("payment_status") != "paid":
-            update = {
-                "payment_status": "paid",
-                "status": "completed",
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            if txn.get("purpose") == "coins":
-                coins = int(txn.get("coins", 0))
-                name = txn.get("player_name")
-                if name and coins > 0:
-                    await db.player_coins.update_one(
-                        {"name_lc": name.lower()},
-                        {"$inc": {"coins": coins}, "$set": {"name": name}},
-                        upsert=True,
-                    )
-                    update["coins_credited"] = coins
-            await db.payment_transactions.update_one(
-                {"session_id": event.session_id}, {"$set": update}
-            )
+    ...
     return {"received": True}
-
 # Include the router in the main app
 app.include_router(api_router)
 
