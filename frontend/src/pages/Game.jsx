@@ -53,6 +53,8 @@ export default function Game() {
   const [customTip, setCustomTip] = useState("");
   const [queueOpen, setQueueOpen] = useState(false);
   const [queueSeconds, setQueueSeconds] = useState(0);
+  const [matchRoom, setMatchRoom] = useState(null);
+  const [matchSide, setMatchSide] = useState(null);
   // Queue timer
   useEffect(() => {
   if (!queueOpen) {
