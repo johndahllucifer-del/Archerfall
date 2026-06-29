@@ -48,7 +48,8 @@ export default function Game() {
   const [nameDraft, setNameDraft] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [coinShopOpen, setCoinShopOpen] = useState(false);
-  // Setup canvas size to viewport
+  const [paying, setPaying] = useState(false);
+  // Setup canvas size to view
   useEffect(() => {
     const compute = () => {
       const w = Math.min(1400, window.innerWidth - 32);
