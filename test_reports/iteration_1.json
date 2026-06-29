@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only smoke test of Arrow Strike 2D canvas game. All requested UI flows verified: main menu load, start gameplay, HUD initialization, canvas interactions (mouse aim/draw/release), pause/resume, menu return, sound toggle, and actual scoring via sustained shooting (Score 0 -> 25, Hits 1/10). No console errors.",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "Main menu loads with 'Arrow Strike' title (game-title)",
+    "menu-high-score visible (shows 0)",
+    "start-game-button visible & clickable",
+    "Power-up legend shows '3x Multi', 'Slow-Mo', 'Boom'",
+    "HUD initial values: Score 0, Level 1, Hits 0/10, 3 lives (rendered as heart icons)",
+    "Canvas (game-canvas) visible and responds to mouse events without errors",
+    "pause-button opens paused overlay; resume-button returns to playing",
+    "menu-button returns to main menu (Start Game visible again)",
+    "sound-toggle can be toggled off/on without errors",
+    "Sustained shooting increments score (0 -> 25) and hits (0 -> 1/10) confirming end-to-end gameplay loop",
+    "Zero console errors / page errors during entire flow"
+  ],
+  "failed": [],
+  "action_items": [],
+  "notes": [
+    "hud-lives data-testid element contains only icon children (3 hearts visible in screenshot), so text_content() is empty. This is by design, not a bug.",
+    "Backend testing intentionally skipped per request (pure frontend game)."
+  ],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

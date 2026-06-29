@@ -1,0 +1,372 @@
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon } from "lucide-react";
+import {
+  createInitialState,
+  resetForNewGame,
+  updateBowAngle,
+  startCharge,
+  releaseShot,
+  updatePhysics,
+} from "@/game/engine";
+import { drawScene } from "@/game/render";
+import { initAudio, setSoundEnabled, sounds } from "@/game/sounds";
+
+const HIGH_SCORE_KEY = "archery_high_score_v1";
+
+export default function Game() {
+  const canvasRef = useRef(null);
+  const stateRef = useRef(null);
+  const rafRef = useRef(0);
+  const lastTimeRef = useRef(0);
+  const [, setTick] = useState(0); // force re-render for HUD
+  const [highScore, setHighScore] = useState(() => {
+    const v = localStorage.getItem(HIGH_SCORE_KEY);
+    return v ? parseInt(v, 10) : 0;
+  });
+  const [soundOn, setSoundOn] = useState(true);
+  const [dimensions, setDimensions] = useState({ width: 1200, height: 720 });
+
+  // Setup canvas size to viewport
+  useEffect(() => {
+    const compute = () => {
+      const w = Math.min(1400, window.innerWidth - 32);
+      const h = Math.min(820, window.innerHeight - 140);
+      setDimensions({ width: w, height: Math.max(480, h) });
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
+
+  // Initialize state
+  useEffect(() => {
+    stateRef.current = createInitialState(dimensions.width, dimensions.height);
+  }, [dimensions.width, dimensions.height]);
+
+  useEffect(() => {
+    setSoundEnabled(soundOn);
+  }, [soundOn]);
+
+  const forceUpdate = useCallback(() => setTick((t) => t + 1), []);
+
+  // Game loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    const loop = (time) => {
+      const state = stateRef.current;
+      if (!state) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+      const dt = Math.min(50, time - (lastTimeRef.current || time));
+      lastTimeRef.current = time;
+      updateBowAngle(state);
+      updatePhysics(state, dt);
+      drawScene(ctx, state, time);
+      // Trigger HUD updates ~ every frame (cheap, single component)
+      if (Math.floor(time / 100) % 1 === 0) forceUpdate();
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [forceUpdate]);
+
+  // Save high score
+  useEffect(() => {
+    const state = stateRef.current;
+    if (!state) return;
+    if (state.status === "gameOver" && state.score > highScore) {
+      localStorage.setItem(HIGH_SCORE_KEY, String(state.score));
+      setHighScore(state.score);
+    }
+  });
+
+  // Mouse handlers
+  const getMouse = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) * canvasRef.current.width) / rect.width,
+      y: ((e.clientY - rect.top) * canvasRef.current.height) / rect.height,
+    };
+  };
+
+  const onMouseMove = (e) => {
+    const state = stateRef.current;
+    if (!state) return;
+    const m = getMouse(e);
+    state.mouse.x = m.x;
+    state.mouse.y = m.y;
+  };
+
+  const onMouseDown = (e) => {
+    initAudio();
+    const state = stateRef.current;
+    if (!state) return;
+    const m = getMouse(e);
+    state.mouse.x = m.x;
+    state.mouse.y = m.y;
+    startCharge(state);
+  };
+
+  const onMouseUp = () => {
+    const state = stateRef.current;
+    if (!state) return;
+    releaseShot(state);
+  };
+
+  const startGame = () => {
+    initAudio();
+    sounds.click();
+    const state = stateRef.current;
+    if (!state) return;
+    resetForNewGame(state);
+  };
+
+  const nextLevel = () => {
+    sounds.click();
+    const state = stateRef.current;
+    if (!state) return;
+    state.status = "playing";
+  };
+
+  const pauseToggle = () => {
+    sounds.click();
+    const state = stateRef.current;
+    if (!state) return;
+    if (state.status === "playing") state.status = "paused";
+    else if (state.status === "paused") state.status = "playing";
+  };
+
+  const goMenu = () => {
+    sounds.click();
+    const state = stateRef.current;
+    if (!state) return;
+    state.status = "menu";
+  };
+
+  const state = stateRef.current;
+  const status = state?.status || "menu";
+
+  return (
+    <div
+      className="min-h-screen w-full no-select"
+      style={{
+        background: "linear-gradient(180deg, #fff5e1 0%, #ffe0ec 50%, #e0f0ff 100%)",
+        fontFamily: "'Bricolage Grotesque', sans-serif",
+      }}
+    >
+      <div className="max-w-[1440px] mx-auto px-4 pt-4 pb-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center shadow-md">
+              <TargetIcon className="w-6 h-6 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800" data-testid="game-title">
+                Arrow Strike
+              </h1>
+              <p className="text-xs text-slate-500 -mt-1">Aim. Charge. Release.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-white shadow-sm">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <span className="font-mono-game text-sm font-bold text-slate-700" data-testid="header-high-score">
+                {highScore}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-white shadow-sm">
+              {soundOn ? <Volume2 className="w-4 h-4 text-slate-600" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+              <Switch checked={soundOn} onCheckedChange={setSoundOn} data-testid="sound-toggle" />
+            </div>
+          </div>
+        </div>
+
+        {/* HUD */}
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <Badge variant="outline" className="bg-white/80 border-orange-200 px-3 py-1.5 text-sm" data-testid="hud-score">
+            <span className="text-slate-500 mr-1.5">Score</span>
+            <span className="font-mono-game font-bold text-slate-800">{state?.score ?? 0}</span>
+          </Badge>
+          <Badge variant="outline" className="bg-white/80 border-blue-200 px-3 py-1.5 text-sm" data-testid="hud-level">
+            <span className="text-slate-500 mr-1.5">Level</span>
+            <span className="font-mono-game font-bold text-slate-800">{state?.level ?? 1}</span>
+          </Badge>
+          <Badge variant="outline" className="bg-white/80 border-emerald-200 px-3 py-1.5 text-sm" data-testid="hud-progress">
+            <span className="text-slate-500 mr-1.5">Hits</span>
+            <span className="font-mono-game font-bold text-slate-800">
+              {state?.targetsHit ?? 0}/{state?.targetsForLevel ?? 10}
+            </span>
+          </Badge>
+          <div className="flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white/80 border-rose-200" data-testid="hud-lives">
+            {[0, 1, 2].map((i) => (
+              <Heart
+                key={i}
+                className={`w-4 h-4 ${i < (state?.lives ?? 0) ? "text-rose-500 fill-rose-500" : "text-slate-300"}`}
+              />
+            ))}
+          </div>
+          {state?.activePowerUp && (
+            <Badge className="bg-gradient-to-r from-cyan-400 to-violet-500 text-white px-3 py-1.5 text-sm border-0 scale-pop" data-testid="hud-powerup">
+              {state.activePowerUp.type === "triple" && <><Zap className="w-3.5 h-3.5 mr-1" />Triple x{state.activePowerUp.ammo}</>}
+              {state.activePowerUp.type === "slowmo" && <><Clock className="w-3.5 h-3.5 mr-1" />Slow-Mo {Math.max(0, Math.ceil((state.activePowerUp.expiresAt - performance.now()) / 1000))}s</>}
+              {state.activePowerUp.type === "explosive" && <><Bomb className="w-3.5 h-3.5 mr-1" />Boom x{state.activePowerUp.ammo}</>}
+            </Badge>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            {status === "playing" || status === "paused" ? (
+              <Button size="sm" variant="outline" className="bg-white/80 btn-press" onClick={pauseToggle} data-testid="pause-button">
+                {status === "playing" ? <><Pause className="w-4 h-4 mr-1" />Pause</> : <><Play className="w-4 h-4 mr-1" />Resume</>}
+              </Button>
+            ) : null}
+            {(status === "playing" || status === "paused" || status === "gameOver") && (
+              <Button size="sm" variant="outline" className="bg-white/80 btn-press" onClick={goMenu} data-testid="menu-button">
+                Menu
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Canvas wrapper */}
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white" style={{ width: dimensions.width, maxWidth: "100%" }}>
+          <canvas
+            ref={canvasRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            className="game-canvas"
+            onMouseMove={onMouseMove}
+            onMouseDown={onMouseDown}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+            data-testid="game-canvas"
+          />
+
+          {/* Menu overlay */}
+          {status === "menu" && (
+            <Overlay>
+              <Card className="px-10 py-8 bg-white/95 border-0 shadow-2xl scale-pop max-w-md text-center">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center mb-4">
+                  <TargetIcon className="w-9 h-9 text-white" strokeWidth={2.5} />
+                </div>
+                <h2 className="text-4xl font-extrabold text-slate-800 mb-2">Arrow Strike</h2>
+                <p className="text-slate-500 mb-6 text-sm">
+                  Hold <span className="font-bold text-slate-700">left-click</span> to draw the bow,
+                  release to fire. Mind the gravity!
+                </p>
+                <Button
+                  size="lg"
+                  className="w-full bg-gradient-to-r from-orange-400 to-pink-500 hover:from-orange-500 hover:to-pink-600 text-white font-bold text-lg shadow-lg pulse-glow btn-press"
+                  onClick={startGame}
+                  data-testid="start-game-button"
+                >
+                  <Play className="w-5 h-5 mr-2" /> Start Game
+                </Button>
+                <div className="mt-5 grid grid-cols-3 gap-2 text-[11px] text-slate-500">
+                  <LegendChip color="bg-cyan-400" label="3x Multi" />
+                  <LegendChip color="bg-violet-400" label="Slow-Mo" />
+                  <LegendChip color="bg-rose-400" label="Boom" />
+                </div>
+                <div className="mt-5 flex items-center justify-center gap-2 text-xs text-slate-500">
+                  <Trophy className="w-4 h-4 text-amber-500" /> High Score:
+                  <span className="font-mono-game font-bold text-slate-700" data-testid="menu-high-score">{highScore}</span>
+                </div>
+              </Card>
+            </Overlay>
+          )}
+
+          {status === "paused" && (
+            <Overlay>
+              <Card className="px-10 py-8 bg-white/95 border-0 shadow-2xl scale-pop text-center">
+                <h2 className="text-3xl font-extrabold text-slate-800 mb-4">Paused</h2>
+                <Button onClick={pauseToggle} className="bg-slate-800 hover:bg-slate-900 text-white" data-testid="resume-button">
+                  <Play className="w-4 h-4 mr-2" /> Resume
+                </Button>
+              </Card>
+            </Overlay>
+          )}
+
+          {status === "levelComplete" && (
+            <Overlay>
+              <Card className="px-10 py-8 bg-white/95 border-0 shadow-2xl scale-pop text-center max-w-md">
+                <div className="text-5xl mb-2">★</div>
+                <h2 className="text-3xl font-extrabold text-slate-800">Level {state.level - 1} Complete!</h2>
+                <p className="text-slate-500 mt-1 mb-5 text-sm">Next: <span className="font-bold text-slate-700">Level {state.level}</span> — more enemies, faster!</p>
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <Stat label="Score" value={state.score} />
+                  <Stat label="Lives" value={state.lives} accent="rose" />
+                </div>
+                <Button
+                  className="w-full bg-gradient-to-r from-emerald-400 to-cyan-500 text-white font-bold btn-press"
+                  onClick={nextLevel}
+                  data-testid="next-level-button"
+                >
+                  Continue
+                </Button>
+              </Card>
+            </Overlay>
+          )}
+
+          {status === "gameOver" && (
+            <Overlay>
+              <Card className="px-10 py-8 bg-white/95 border-0 shadow-2xl scale-pop text-center max-w-md">
+                <h2 className="text-4xl font-extrabold text-slate-800 mb-1">Game Over</h2>
+                <p className="text-slate-500 text-sm mb-5">Nice run, archer.</p>
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <Stat label="Final Score" value={state.score} />
+                  <Stat label="Best" value={Math.max(state.score, highScore)} accent="amber" />
+                </div>
+                <div className="flex gap-2">
+                  <Button className="flex-1 bg-slate-800 hover:bg-slate-900 text-white btn-press" onClick={startGame} data-testid="play-again-button">
+                    <RotateCcw className="w-4 h-4 mr-2" /> Play Again
+                  </Button>
+                  <Button variant="outline" onClick={goMenu} data-testid="back-to-menu-button">Menu</Button>
+                </div>
+              </Card>
+            </Overlay>
+          )}
+        </div>
+
+        {/* Footer hint */}
+        <div className="mt-3 text-center text-xs text-slate-500">
+          <span className="font-mono-game">L-Click hold</span> = charge & aim &nbsp;·&nbsp;
+          <span className="font-mono-game">release</span> = shoot &nbsp;·&nbsp; Shoot floating crates to grab power-ups
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const Overlay = ({ children }) => (
+  <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-white/30">
+    {children}
+  </div>
+);
+
+const Stat = ({ label, value, accent = "slate" }) => {
+  const colors = {
+    slate: "text-slate-800",
+    rose: "text-rose-500",
+    amber: "text-amber-500",
+  };
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white/70 py-3">
+      <div className="text-[11px] uppercase tracking-wider text-slate-500">{label}</div>
+      <div className={`font-mono-game font-extrabold text-2xl ${colors[accent]}`}>{value}</div>
+    </div>
+  );
+};
+
+const LegendChip = ({ color, label }) => (
+  <div className="flex items-center gap-1.5 rounded-md bg-slate-50 border border-slate-200 py-1 px-2">
+    <span className={`w-2.5 h-2.5 rounded-sm ${color}`} />
+    <span>{label}</span>
+  </div>
+);
