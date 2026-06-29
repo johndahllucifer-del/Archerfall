@@ -50,6 +50,7 @@ export default function Game() {
   const [coinShopOpen, setCoinShopOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [customTip, setCustomTip] = useState("");
   // Setup canvas size to view
   useEffect(() => {
     const compute = () => {
