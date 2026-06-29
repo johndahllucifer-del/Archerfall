@@ -49,6 +49,7 @@ export default function Game() {
   const [submitted, setSubmitted] = useState(false);
   const [coinShopOpen, setCoinShopOpen] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   // Setup canvas size to view
   useEffect(() => {
     const compute = () => {
