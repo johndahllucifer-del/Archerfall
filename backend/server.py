@@ -313,7 +313,14 @@ async def coins_consume(payload: dict):
 # Include the router in the main app
 waiting_players = []
 active_rooms = {}
-
+@app.get("/ws-health")
+async def ws_health():
+    return {
+        "ok": True,
+        "websocket": "ready",
+        "waiting_players": len(waiting_players),
+        "active_rooms": len(active_rooms)
+    }
 @app.websocket("/ws/matchmaking")
 async def matchmaking_socket(websocket: WebSocket):
     await websocket.accept()
