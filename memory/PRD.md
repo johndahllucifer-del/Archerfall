@@ -34,7 +34,23 @@
 - Particle effects + floating score text
 - Cartoon background: gradient sky, sun, parallax clouds, hills, grass
 - Sound toggle, high score persistence, responsive canvas sizing
-- All 11 testing-agent UI flows passed (100%)
+
+### Iteration 2 (2026-02)
+- **Coin economy**: earn coins on level complete = floor(scoreThisLevel/6) + level*15. Persisted in localStorage.
+- **Shop dialog** (shadcn Dialog + Tabs) with header button + level-complete shortcut
+- **4 bows** with unique abilities:
+  - Wooden (free, equipped): 1 arrow, baseline
+  - Emerald (250): 2-arrow spread
+  - Amethyst (600): 3-arrow spread
+  - Diamond (1200): 1 arrow, +35% speed, 1.5x score
+- **4 passive items** (one-time purchase, permanent):
+  - Quick Draw Gloves (200): charge 40% faster
+  - Eagle Eye (300): arrows 25% faster
+  - Lucky Charm (450): +70% power-up drop chance
+  - Extra Heart (400): start runs with 4 lives
+- **Theme cycle** by level (day → sunset → night, repeats every 6): night has moon, stars, fireflies; sunset has low burning sun and warmer palette
+- **More levels** via dynamically increasing target counts and faster spawn intervals (capped at 400ms)
+- All 10 testing-agent flows passed (100%)
 
 ## Personas
 - Casual web gamer wanting a quick browser-based arcade experience
