@@ -52,7 +52,20 @@ export default function Game() {
   const [supportOpen, setSupportOpen] = useState(false);
   const [customTip, setCustomTip] = useState("");
   const [queueOpen, setQueueOpen] = useState(false);
-  // Setup canvas size to view
+  const [queueSeconds, setQueueSeconds] = useState(0);
+  // Queue timer
+  useEffect(() => {
+  if (!queueOpen) {
+    setQueueSeconds(0);
+    return;
+  }
+
+  const timer = setInterval(() => {
+    setQueueSeconds((prev) => prev + 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [queueOpen]);
   useEffect(() => {
     const compute = () => {
       const w = Math.min(1400, window.innerWidth - 32);
@@ -646,11 +659,87 @@ export default function Game() {
             <li>· If an opponent&apos;s arrow hits your bow first → <span className="font-bold text-orange-300">tanked</span>, no damage</li>
             <li>· Separate ranked leaderboard (ELO-style) for PvP</li>
           </ul>
-          <Button className="mt-2 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => setMpOpen(false)} data-testid="multiplayer-close">
-            Got it
+          <Button className="mt-2 bg-orange-500 hover:bg-orange-600 text-white"
+               onClick={() => {
+               setMpOpen(false);
+               setQueueOpen(true);
+           }}      
+     data-testid="multiplayer-find-match"
+            >
+            Find Match
           </Button>
         </DialogContent>
       </Dialog>
+      <Dialog open={queueOpen} onOpenChange={setQueueOpen}>
+  <DialogContent className="max-w-lg bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-950 text-white border-0 shadow-2xl">
+    <DialogHeader>
+      <DialogTitle className="text-3xl font-extrabold text-center">
+        🏰 Castle Siege
+      </DialogTitle>
+      <DialogDescription className="text-slate-300 text-center">
+        Real-time 1v1 matchmaking queue
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="py-5 space-y-5 text-center">
+      <div className="mx-auto h-24 w-24 rounded-full bg-orange-500/20 border border-orange-300/40 flex items-center justify-center text-5xl animate-pulse">
+        ⚔️
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Players Online</div>
+          <div className="text-2xl font-bold text-emerald-300">247</div>
+        </div>
+
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Region</div>
+          <div className="text-2xl font-bold text-cyan-300">Europe</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-white/10 p-4">
+        <div className="text-slate-300 text-sm">Status</div>
+        <div className="text-xl font-bold text-orange-300">
+          Searching for opponent...
+        </div>
+      </div>
+
+      <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-orange-400 to-pink-500 rounded-full transition-all"
+          style={{ width: `${Math.min(90, 25 + queueSeconds * 4)}%` }}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Elapsed Time</div>
+          <div className="font-bold text-orange-300">{queueSeconds}s</div>
+        </div>
+
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Estimated Wait</div>
+          <div className="font-bold text-pink-300">&lt; 20s</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-black/20 border border-white/10 p-3">
+        <div className="text-xs text-slate-400 mb-1">TIP OF THE MATCH</div>
+        <div className="text-sm text-slate-200">
+          If an enemy arrow hits your bow first, it gets tanked and deals no damage.
+        </div>
+      </div>
+
+      <Button
+        className="w-full bg-red-500 hover:bg-red-600 text-white"
+        onClick={() => setQueueOpen(false)}
+      >
+        Cancel Queue
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
       <Dialog open={coinShopOpen} onOpenChange={setCoinShopOpen}>
         <DialogContent className="max-w-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border-0 shadow-2xl" data-testid="coinshop-dialog">
           <DialogHeader>
