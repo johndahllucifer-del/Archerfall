@@ -309,12 +309,7 @@ async def coins_consume(payload: dict):
     new_val = max(0, int(doc.get("coins", 0)) - amount)
     await db.player_coins.update_one({"name_lc": name.lower()}, {"$set": {"coins": new_val}})
     return {"ok": True, "remaining": new_val}
-
-
-@api_router.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    ...
-    return {"received": True}
+ 
 # Include the router in the main app
 app.include_router(api_router)
 
