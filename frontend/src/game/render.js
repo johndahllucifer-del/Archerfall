@@ -1,24 +1,18 @@
 // Canvas rendering. Pure draw functions reading from state.
-import { BOW_X, MIN_POWER, MAX_POWER } from "./engine";
+import { getEffectiveChargeMs } from "./engine";
+import { BOWS } from "./shop";
 
-const drawCloud = (ctx, x, y, scale = 1) => {
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.beginPath();
-  ctx.arc(x, y, 18 * scale, 0, Math.PI * 2);
-  ctx.arc(x + 18 * scale, y + 4 * scale, 22 * scale, 0, Math.PI * 2);
-  ctx.arc(x + 38 * scale, y, 16 * scale, 0, Math.PI * 2);
-  ctx.arc(x + 20 * scale, y - 10 * scale, 18 * scale, 0, Math.PI * 2);
-  ctx.fill();
-};
-
-const drawHill = (ctx, x, y, w, h, color) => {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
-  ctx.fill();
-};
+const drawCloud = () => {};
+const drawHill = () => {};
 
 export const drawBackground = (ctx, state, time) => {
+  const { width, height, theme = "day" } = state;
+  if (theme === "night") return drawNightBackground(ctx, state, time);
+  if (theme === "sunset") return drawSunsetBackground(ctx, state, time);
+  return drawDayBackground(ctx, state, time);
+};
+
+const drawDayBackground = (ctx, state, time) => {
   const { width, height } = state;
   // Sky
   const sky = ctx.createLinearGradient(0, 0, 0, height);
@@ -42,26 +36,127 @@ export const drawBackground = (ctx, state, time) => {
   ctx.beginPath(); ctx.arc(sunX, sunY, 38, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
-  // Clouds (parallax)
+  drawClouds(ctx, width, height, time, "rgba(255,255,255,0.85)");
+  drawHills(ctx, width, height, "#bfddc3", "#a8d4ae");
+  drawGround(ctx, width, height, "#86c596", "#6fb480", "#5ea36f");
+};
+
+const drawSunsetBackground = (ctx, state, time) => {
+  const { width, height } = state;
+  const sky = ctx.createLinearGradient(0, 0, 0, height);
+  sky.addColorStop(0, "#2a1b3d");
+  sky.addColorStop(0.4, "#c44569");
+  sky.addColorStop(0.7, "#f8b500");
+  sky.addColorStop(1, "#ff7e5f");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, width, height);
+
+  // Sun setting low
+  ctx.save();
+  const sunX = width * 0.75, sunY = height - 130;
+  const grad = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 180);
+  grad.addColorStop(0, "rgba(255,150,80,1)");
+  grad.addColorStop(0.4, "rgba(255,120,60,0.5)");
+  grad.addColorStop(1, "rgba(255,120,60,0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(sunX, sunY, 180, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ff6b35";
+  ctx.beginPath(); ctx.arc(sunX, sunY, 50, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  drawClouds(ctx, width, height, time, "rgba(255,180,140,0.7)");
+  drawHills(ctx, width, height, "#4a2c4f", "#3a1f3d");
+  drawGround(ctx, width, height, "#2d1b3d", "#1f0f2a", "#1a0a24");
+};
+
+const drawNightBackground = (ctx, state, time) => {
+  const { width, height } = state;
+  const sky = ctx.createLinearGradient(0, 0, 0, height);
+  sky.addColorStop(0, "#0a0e2a");
+  sky.addColorStop(0.5, "#1a1a4a");
+  sky.addColorStop(1, "#2d2a5a");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, width, height);
+
+  // Stars (deterministic based on time so they twinkle but stay put)
+  ctx.fillStyle = "#fff";
+  for (let i = 0; i < 50; i++) {
+    const sx = (i * 137.5) % width;
+    const sy = ((i * 79.3) % (height - 200));
+    const tw = (Math.sin(time * 0.002 + i) + 1) * 0.5;
+    ctx.globalAlpha = 0.4 + tw * 0.6;
+    const r = 0.8 + (i % 3) * 0.4;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Moon
+  ctx.save();
+  const mx = width - 150, my = 120;
+  const mg = ctx.createRadialGradient(mx, my, 10, mx, my, 90);
+  mg.addColorStop(0, "rgba(220,220,255,0.6)");
+  mg.addColorStop(1, "rgba(220,220,255,0)");
+  ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.arc(mx, my, 90, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#e8e8ff";
+  ctx.beginPath(); ctx.arc(mx, my, 36, 0, Math.PI * 2); ctx.fill();
+  // Moon craters
+  ctx.fillStyle = "rgba(160,160,200,0.5)";
+  ctx.beginPath(); ctx.arc(mx - 10, my - 6, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx + 8, my + 10, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx + 12, my - 12, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  drawClouds(ctx, width, height, time, "rgba(80,80,140,0.5)");
+  drawHills(ctx, width, height, "#1a2040", "#10162e");
+  drawGround(ctx, width, height, "#1a2545", "#0f1830", "#243056");
+
+  // Fireflies
+  for (let i = 0; i < 8; i++) {
+    const fx = ((i * 200 + time * 0.04) % (width + 40)) - 20;
+    const fy = height - 90 - Math.sin(time * 0.003 + i) * 30;
+    ctx.fillStyle = "rgba(190,255,120,0.8)";
+    ctx.beginPath(); ctx.arc(fx, fy, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(190,255,120,0.2)";
+    ctx.beginPath(); ctx.arc(fx, fy, 6, 0, Math.PI * 2); ctx.fill();
+  }
+};
+
+const drawClouds = (ctx, width, height, time, color) => {
+  ctx.save();
   const t = time * 0.00003;
   for (let i = 0; i < 5; i++) {
     const cx = ((i * 280 - t * 4000) % (width + 200) + width + 200) % (width + 200) - 100;
-    drawCloud(ctx, cx, 70 + i * 24, 0.8 + (i % 2) * 0.3);
+    ctx.fillStyle = color;
+    const scale = 0.8 + (i % 2) * 0.3;
+    const y = 70 + i * 24;
+    ctx.beginPath();
+    ctx.arc(cx, y, 18 * scale, 0, Math.PI * 2);
+    ctx.arc(cx + 18 * scale, y + 4 * scale, 22 * scale, 0, Math.PI * 2);
+    ctx.arc(cx + 38 * scale, y, 16 * scale, 0, Math.PI * 2);
+    ctx.arc(cx + 20 * scale, y - 10 * scale, 18 * scale, 0, Math.PI * 2);
+    ctx.fill();
   }
+  ctx.restore();
+};
 
-  // Distant hills
-  drawHill(ctx, width * 0.2, height - 60, width * 0.3, 80, "#bfddc3");
-  drawHill(ctx, width * 0.65, height - 50, width * 0.32, 70, "#a8d4ae");
+const drawHills = (ctx, width, height, color1, color2) => {
+  ctx.fillStyle = color1;
+  ctx.beginPath();
+  ctx.ellipse(width * 0.2, height - 60, width * 0.3, 80, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = color2;
+  ctx.beginPath();
+  ctx.ellipse(width * 0.65, height - 50, width * 0.32, 70, 0, 0, Math.PI * 2);
+  ctx.fill();
+};
 
-  // Ground
-  ctx.fillStyle = "#86c596";
+const drawGround = (ctx, width, height, base, strip, grass) => {
+  ctx.fillStyle = base;
   ctx.fillRect(0, height - 70, width, 70);
-  // Grass strip
-  ctx.fillStyle = "#6fb480";
+  ctx.fillStyle = strip;
   ctx.fillRect(0, height - 70, width, 6);
-
-  // Grass blades
-  ctx.strokeStyle = "#5ea36f";
+  ctx.strokeStyle = grass;
   ctx.lineWidth = 1.5;
   for (let i = 0; i < width; i += 14) {
     const gx = i;
@@ -77,24 +172,38 @@ export const drawBackground = (ctx, state, time) => {
 
 export const drawBow = (ctx, state) => {
   const { bow, charging } = state;
+  const equippedBow = BOWS[state.equippedBow] || BOWS.wooden;
+  const isNight = state.theme === "night";
   ctx.save();
   ctx.translate(bow.x, bow.y);
   ctx.rotate(bow.angle);
 
+  // Glow for premium bows
+  if (equippedBow.id !== "wooden") {
+    ctx.save();
+    const g = ctx.createRadialGradient(0, 0, 4, 0, 0, 48);
+    g.addColorStop(0, equippedBow.color + "80");
+    g.addColorStop(1, equippedBow.color + "00");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, 48, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   // Bow body
-  ctx.strokeStyle = "#7a4a2a";
+  ctx.strokeStyle = equippedBow.color;
   ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.arc(0, 0, 32, -Math.PI / 2.2, Math.PI / 2.2);
   ctx.stroke();
 
   // Bow grip
-  ctx.fillStyle = "#3a2418";
+  ctx.fillStyle = equippedBow.accent;
   ctx.fillRect(-4, -10, 8, 20);
 
   // String
-  const chargePull = charging ? Math.min(1, (performance.now() - state.chargeStart) / 900) : 0;
-  ctx.strokeStyle = "#fff";
+  const chargeDur = getEffectiveChargeMs(state);
+  const chargePull = charging ? Math.min(1, (performance.now() - state.chargeStart) / chargeDur) : 0;
+  ctx.strokeStyle = isNight ? "#cbd5e1" : "#fff";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(0, -28);
@@ -127,7 +236,7 @@ export const drawBow = (ctx, state) => {
 
   // Power meter when charging
   if (charging) {
-    const t = Math.min(1, (performance.now() - state.chargeStart) / 900);
+    const t = Math.min(1, (performance.now() - state.chargeStart) / chargeDur);
     const meterW = 90, meterH = 8;
     const mx = bow.x - meterW / 2, my = bow.y + 60;
     ctx.fillStyle = "rgba(0,0,0,0.25)";
@@ -141,7 +250,7 @@ export const drawBow = (ctx, state) => {
 
   // Aim line (dotted)
   ctx.save();
-  ctx.strokeStyle = "rgba(0,0,0,0.25)";
+  ctx.strokeStyle = isNight ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.25)";
   ctx.setLineDash([4, 6]);
   ctx.lineWidth = 1.5;
   ctx.beginPath();

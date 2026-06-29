@@ -1,0 +1,22 @@
+{
+  "summary": "Frontend-only smoke test of shop system on Arrow Strike game. All 13 review items relevant to UI/integration verified end-to-end: header coins display, shop dialog open, tabs, bow catalog (4 bows), item catalog (4 items), buy bow, equip swap, buy item, localStorage persistence (archery_coins_v1, archery_owned_bows_v1, archery_owned_items_v1, archery_equipped_bow_v1), shot fire on canvas, pause regression. Zero console/page errors.",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "header-coins shows pre-seeded 1500 from archery_coins_v1",
+    "open-shop-button opens shop-dialog with both tabs (shop-tab-bows, shop-tab-items)",
+    "All 4 bows render (wooden/emerald/amethyst/diamond) with correct equipped/buy state; wooden equipped by default",
+    "All 4 items render (quickDraw/eagleEye/luckyCharm/extraLife) with buy buttons when affordable",
+    "Buy amethyst (cost 600): coins go 1500->900, shop-bow-amethyst-equipped visible, wooden shows shop-bow-wooden-equip button",
+    "Equip swap: clicking shop-bow-wooden-equip re-equips wooden; amethyst then shows Equip button",
+    "Buy quickDraw (cost 200): coins go 900->700, shop-item-quickDraw-owned badge visible",
+    "localStorage persisted correctly: coins=700, owned=[wooden,amethyst], equipped=wooden, items=[quickDraw]",
+    "Start Game + canvas hold/release fires arrows with no console errors (amethyst multi-arrow path executed earlier in flow)",
+    "Pause/Resume regression works"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "skipped", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Did not perform a full page reload check because the playwright add_init_script reseeds coins to 1500 on every load; instead verified persistence via direct localStorage read (which is the same source of truth used by loadProgress in shop.js). Did not exercise the level-complete '+Coins' Stat (requires real gameplay grind) per review request."
+}

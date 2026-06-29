@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock } from "lucide-react";
 import {
   createInitialState,
   resetForNewGame,
@@ -11,9 +13,13 @@ import {
   startCharge,
   releaseShot,
   updatePhysics,
+  buyBow,
+  equipBow,
+  buyItem,
 } from "@/game/engine";
 import { drawScene } from "@/game/render";
 import { initAudio, setSoundEnabled, sounds } from "@/game/sounds";
+import { BOWS, ITEMS } from "@/game/shop";
 
 const HIGH_SCORE_KEY = "archery_high_score_v1";
 
@@ -29,6 +35,7 @@ export default function Game() {
   });
   const [soundOn, setSoundOn] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 720 });
+  const [shopOpen, setShopOpen] = useState(false);
 
   // Setup canvas size to viewport
   useEffect(() => {
@@ -151,6 +158,25 @@ export default function Game() {
     state.status = "menu";
   };
 
+  const handleBuyBow = (id) => {
+    const state = stateRef.current;
+    if (!state) return;
+    if (buyBow(state, id)) sounds.powerUp();
+    forceUpdate();
+  };
+  const handleEquipBow = (id) => {
+    const state = stateRef.current;
+    if (!state) return;
+    if (equipBow(state, id)) sounds.click();
+    forceUpdate();
+  };
+  const handleBuyItem = (id) => {
+    const state = stateRef.current;
+    if (!state) return;
+    if (buyItem(state, id)) sounds.powerUp();
+    forceUpdate();
+  };
+
   const state = stateRef.current;
   const status = state?.status || "menu";
 
@@ -177,6 +203,19 @@ export default function Game() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100/90 border border-amber-200 shadow-sm" data-testid="header-coins">
+              <Coins className="w-4 h-4 text-amber-600" />
+              <span className="font-mono-game text-sm font-bold text-amber-700">{state?.coins ?? 0}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white/80 btn-press"
+              onClick={() => { sounds.click(); setShopOpen(true); }}
+              data-testid="open-shop-button"
+            >
+              <ShoppingBag className="w-4 h-4 mr-1" /> Shop
+            </Button>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-white shadow-sm">
               <Trophy className="w-4 h-4 text-amber-500" />
               <span className="font-mono-game text-sm font-bold text-slate-700" data-testid="header-high-score">
@@ -298,18 +337,33 @@ export default function Game() {
               <Card className="px-10 py-8 bg-white/95 border-0 shadow-2xl scale-pop text-center max-w-md">
                 <div className="text-5xl mb-2">★</div>
                 <h2 className="text-3xl font-extrabold text-slate-800">Level {state.level - 1} Complete!</h2>
-                <p className="text-slate-500 mt-1 mb-5 text-sm">Next: <span className="font-bold text-slate-700">Level {state.level}</span> — more enemies, faster!</p>
-                <div className="grid grid-cols-2 gap-3 mb-5">
+                <p className="text-slate-500 mt-1 mb-4 text-sm">
+                  Next: <span className="font-bold text-slate-700">Level {state.level}</span>
+                  {state.theme === "night" && <span className="ml-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-900 text-indigo-100 text-[10px] font-bold">NIGHT</span>}
+                  {state.theme === "sunset" && <span className="ml-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500 text-white text-[10px] font-bold">SUNSET</span>}
+                </p>
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   <Stat label="Score" value={state.score} />
                   <Stat label="Lives" value={state.lives} accent="rose" />
+                  <Stat label="+Coins" value={state.coinsEarnedThisLevel} accent="amber" />
                 </div>
-                <Button
-                  className="w-full bg-gradient-to-r from-emerald-400 to-cyan-500 text-white font-bold btn-press"
-                  onClick={nextLevel}
-                  data-testid="next-level-button"
-                >
-                  Continue
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 btn-press"
+                    onClick={() => { sounds.click(); setShopOpen(true); }}
+                    data-testid="level-shop-button"
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-2" /> Shop
+                  </Button>
+                  <Button
+                    className="flex-1 bg-gradient-to-r from-emerald-400 to-cyan-500 text-white font-bold btn-press"
+                    onClick={nextLevel}
+                    data-testid="next-level-button"
+                  >
+                    Continue
+                  </Button>
+                </div>
               </Card>
             </Overlay>
           )}
@@ -340,6 +394,15 @@ export default function Game() {
           <span className="font-mono-game">release</span> = shoot &nbsp;·&nbsp; Shoot floating crates to grab power-ups
         </div>
       </div>
+
+      <ShopDialog
+        open={shopOpen}
+        onOpenChange={setShopOpen}
+        state={state}
+        onBuyBow={handleBuyBow}
+        onEquipBow={handleEquipBow}
+        onBuyItem={handleBuyItem}
+      />
     </div>
   );
 }
@@ -370,3 +433,126 @@ const LegendChip = ({ color, label }) => (
     <span>{label}</span>
   </div>
 );
+
+const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem }) => {
+  if (!state) return null;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl bg-gradient-to-br from-white via-amber-50 to-orange-50 border-0 shadow-2xl" data-testid="shop-dialog">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold text-slate-800">
+            <ShoppingBag className="w-6 h-6 text-orange-500" />
+            Archer&apos;s Shop
+            <span className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/90 text-amber-900 text-base font-mono-game font-bold" data-testid="shop-coins">
+              <Coins className="w-4 h-4" /> {state.coins}
+            </span>
+          </DialogTitle>
+          <DialogDescription className="text-slate-500">
+            Spend coins earned from completed levels to unlock powerful bows and gear.
+          </DialogDescription>
+        </DialogHeader>
+        <Tabs defaultValue="bows" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="bows" data-testid="shop-tab-bows">Bows</TabsTrigger>
+            <TabsTrigger value="items" data-testid="shop-tab-items">Items</TabsTrigger>
+          </TabsList>
+          <TabsContent value="bows" className="mt-4 grid sm:grid-cols-2 gap-3 max-h-[55vh] overflow-y-auto pr-1">
+            {Object.values(BOWS).map((bow) => {
+              const owned = state.ownedBows.includes(bow.id);
+              const equipped = state.equippedBow === bow.id;
+              const canAfford = state.coins >= bow.cost;
+              const Icon = bow.icon;
+              return (
+                <Card key={bow.id} className="p-4 border border-slate-200/70 bg-white/80" data-testid={`shop-bow-${bow.id}`}>
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
+                      style={{ background: `linear-gradient(135deg, ${bow.color}, ${bow.accent})` }}
+                    >
+                      <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-slate-800">{bow.name}</div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{bow.rarity}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">{bow.desc}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    {bow.cost > 0 ? (
+                      <span className="flex items-center gap-1 text-sm font-mono-game font-bold text-amber-700">
+                        <Coins className="w-3.5 h-3.5" /> {bow.cost}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">Starter</span>
+                    )}
+                    {equipped ? (
+                      <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white" data-testid={`shop-bow-${bow.id}-equipped`}>
+                        <Check className="w-3 h-3 mr-1" /> Equipped
+                      </Badge>
+                    ) : owned ? (
+                      <Button size="sm" variant="outline" onClick={() => onEquipBow(bow.id)} data-testid={`shop-bow-${bow.id}-equip`}>
+                        Equip
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={!canAfford}
+                        onClick={() => onBuyBow(bow.id)}
+                        className="bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:opacity-90 disabled:opacity-40"
+                        data-testid={`shop-bow-${bow.id}-buy`}
+                      >
+                        {canAfford ? "Buy" : <><Lock className="w-3 h-3 mr-1" /> Need {bow.cost - state.coins}</>}
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </TabsContent>
+          <TabsContent value="items" className="mt-4 grid sm:grid-cols-2 gap-3 max-h-[55vh] overflow-y-auto pr-1">
+            {Object.values(ITEMS).map((item) => {
+              const owned = state.ownedItems.includes(item.id);
+              const canAfford = state.coins >= item.cost;
+              const Icon = item.icon;
+              return (
+                <Card key={item.id} className="p-4 border border-slate-200/70 bg-white/80" data-testid={`shop-item-${item.id}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br ${item.color}`}>
+                      <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold text-slate-800">{item.name}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{item.desc}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-sm font-mono-game font-bold text-amber-700">
+                      <Coins className="w-3.5 h-3.5" /> {item.cost}
+                    </span>
+                    {owned ? (
+                      <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white" data-testid={`shop-item-${item.id}-owned`}>
+                        <Check className="w-3 h-3 mr-1" /> Owned
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={!canAfford}
+                        onClick={() => onBuyItem(item.id)}
+                        className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:opacity-90 disabled:opacity-40"
+                        data-testid={`shop-item-${item.id}-buy`}
+                      >
+                        {canAfford ? "Buy" : <><Lock className="w-3 h-3 mr-1" /> Need {item.cost - state.coins}</>}
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+};

@@ -1,42 +1,95 @@
 // Pure game engine logic (no React). Mutates a shared "state" object.
 import { sounds } from "./sounds";
+import { BOWS, ITEMS, loadProgress, saveProgress, getThemeForLevel } from "./shop";
 
 export const GRAVITY = 0.32;
 export const BOW_X = 90;
 export const ARROW_LENGTH = 44;
 export const MAX_POWER = 22;
 export const MIN_POWER = 7;
+export const BASE_CHARGE_MS = 900;
 
-export const createInitialState = (width, height) => ({
-  width,
-  height,
-  bow: { x: BOW_X, y: height / 2 },
-  mouse: { x: width / 2, y: height / 2 },
-  charging: false,
-  chargeStart: 0,
-  power: 0,
-  arrows: [],
-  targets: [],
-  particles: [],
-  drops: [], // power-up drops
-  floatTexts: [], // "+10" floating texts
-  score: 0,
-  level: 1,
-  lives: 3,
-  targetsHit: 0,
-  targetsForLevel: 10,
-  spawnTimer: 0,
-  spawnInterval: 1400,
-  activePowerUp: null, // { type, expiresAt, ammo }
-  slowmoFactor: 1,
-  status: "menu", // menu | playing | paused | gameOver | levelComplete
-  lastSpawnTime: performance.now(),
-});
+export const getEffectiveChargeMs = (state) =>
+  state.ownedItems && state.ownedItems.includes("quickDraw") ? BASE_CHARGE_MS * 0.6 : BASE_CHARGE_MS;
+
+export const createInitialState = (width, height) => {
+  const prog = loadProgress();
+  return {
+    width,
+    height,
+    bow: { x: BOW_X, y: height / 2 },
+    mouse: { x: width / 2, y: height / 2 },
+    charging: false,
+    chargeStart: 0,
+    power: 0,
+    arrows: [],
+    targets: [],
+    particles: [],
+    drops: [],
+    floatTexts: [],
+    score: 0,
+    scoreAtLevelStart: 0,
+    coinsEarnedThisLevel: 0,
+    level: 1,
+    lives: 3,
+    targetsHit: 0,
+    targetsForLevel: 10,
+    spawnTimer: 0,
+    spawnInterval: 1400,
+    activePowerUp: null,
+    slowmoFactor: 1,
+    status: "menu",
+    lastSpawnTime: performance.now(),
+    theme: "day",
+    // Persistent progress (mirrored to localStorage)
+    coins: prog.coins,
+    ownedBows: prog.ownedBows,
+    ownedItems: prog.ownedItems,
+    equippedBow: prog.equippedBow,
+  };
+};
+
+export const persistProgress = (state) => {
+  saveProgress({
+    coins: state.coins,
+    ownedBows: state.ownedBows,
+    ownedItems: state.ownedItems,
+    equippedBow: state.equippedBow,
+  });
+};
+
+export const buyBow = (state, bowId) => {
+  const bow = BOWS[bowId];
+  if (!bow || state.ownedBows.includes(bowId) || state.coins < bow.cost) return false;
+  state.coins -= bow.cost;
+  state.ownedBows.push(bowId);
+  state.equippedBow = bowId;
+  persistProgress(state);
+  return true;
+};
+
+export const equipBow = (state, bowId) => {
+  if (!state.ownedBows.includes(bowId)) return false;
+  state.equippedBow = bowId;
+  persistProgress(state);
+  return true;
+};
+
+export const buyItem = (state, itemId) => {
+  const item = ITEMS[itemId];
+  if (!item || state.ownedItems.includes(itemId) || state.coins < item.cost) return false;
+  state.coins -= item.cost;
+  state.ownedItems.push(itemId);
+  persistProgress(state);
+  return true;
+};
 
 export const resetForNewGame = (state) => {
   state.score = 0;
+  state.scoreAtLevelStart = 0;
+  state.coinsEarnedThisLevel = 0;
   state.level = 1;
-  state.lives = 3;
+  state.lives = state.ownedItems.includes("extraLife") ? 4 : 3;
   state.targetsHit = 0;
   state.targetsForLevel = 10;
   state.spawnInterval = 1400;
@@ -48,6 +101,7 @@ export const resetForNewGame = (state) => {
   state.activePowerUp = null;
   state.slowmoFactor = 1;
   state.status = "playing";
+  state.theme = getThemeForLevel(1);
   state.lastSpawnTime = performance.now();
 };
 
@@ -67,8 +121,15 @@ export const startCharge = (state) => {
 export const releaseShot = (state) => {
   if (state.status !== "playing" || !state.charging) return;
   const heldMs = performance.now() - state.chargeStart;
-  const t = Math.min(1, heldMs / 900);
-  const power = MIN_POWER + (MAX_POWER - MIN_POWER) * t;
+  const chargeDur = getEffectiveChargeMs(state);
+  const t = Math.min(1, heldMs / chargeDur);
+  let power = MIN_POWER + (MAX_POWER - MIN_POWER) * t;
+
+  const bow = BOWS[state.equippedBow] || BOWS.wooden;
+  let speedMult = bow.arrowSpeedMult;
+  if (state.ownedItems.includes("eagleEye")) speedMult *= 1.25;
+  power *= speedMult;
+
   state.charging = false;
   state.power = power;
 
@@ -76,7 +137,19 @@ export const releaseShot = (state) => {
   const isTriple = state.activePowerUp?.type === "triple" && state.activePowerUp.ammo > 0;
   const isExplosive = state.activePowerUp?.type === "explosive" && state.activePowerUp.ammo > 0;
 
-  const spreads = isTriple ? [-0.18, 0, 0.18] : [0];
+  // Determine arrow count: bow's intrinsic count, boosted by triple powerup
+  let arrowCount = bow.arrowCount;
+  if (isTriple) arrowCount = Math.max(3, arrowCount + 2);
+
+  // Build evenly spaced spreads centered on angle
+  const spreads = [];
+  if (arrowCount === 1) spreads.push(0);
+  else {
+    const step = 0.16;
+    const start = -((arrowCount - 1) / 2) * step;
+    for (let i = 0; i < arrowCount; i++) spreads.push(start + i * step);
+  }
+
   spreads.forEach((spread) => {
     state.arrows.push({
       x: state.bow.x + Math.cos(angle + spread) * 30,
@@ -86,6 +159,7 @@ export const releaseShot = (state) => {
       rotation: angle + spread,
       alive: true,
       explosive: isExplosive,
+      bowId: bow.id,
       trail: [],
     });
   });
@@ -171,6 +245,7 @@ const maybeDropPowerUp = (state, x, y, target) => {
   else if (target.type === "bullseye") chance = 0.1;
   else if (target.type === "flyer") chance = 0.18;
   else if (target.type === "boss") chance = 0.7;
+  if (state.ownedItems.includes("luckyCharm")) chance *= 1.7;
   if (Math.random() < chance) {
     const kinds = ["triple", "slowmo", "explosive"];
     const kind = kinds[Math.floor(Math.random() * kinds.length)];
@@ -208,9 +283,11 @@ const damageTarget = (state, target, dmg = 1) => {
   target.hp -= dmg;
   if (target.hp <= 0) {
     target.alive = false;
-    state.score += target.points;
+    const bow = BOWS[state.equippedBow] || BOWS.wooden;
+    const earned = Math.round(target.points * bow.scoreMult);
+    state.score += earned;
     state.targetsHit += 1;
-    spawnFloatText(state, target.x, target.y, `+${target.points}`);
+    spawnFloatText(state, target.x, target.y, `+${earned}`);
     spawnParticles(state, target.x, target.y, target.color || "#fbbf24", target.type === "boss" ? 28 : 16, target.type === "boss");
     if (target.type === "balloon") sounds.pop();
     else sounds.hit();
@@ -223,10 +300,18 @@ const damageTarget = (state, target, dmg = 1) => {
 
 const checkLevelUp = (state) => {
   if (state.targetsHit >= state.targetsForLevel) {
+    // Award coins: based on score gained this level + level bonus
+    const scoreThisLevel = state.score - state.scoreAtLevelStart;
+    state.coinsEarnedThisLevel = Math.floor(scoreThisLevel / 6) + state.level * 15;
+    state.coins += state.coinsEarnedThisLevel;
+    persistProgress(state);
+
     state.level += 1;
     state.targetsHit = 0;
     state.targetsForLevel = 10 + state.level * 2;
-    state.spawnInterval = Math.max(450, 1400 - state.level * 90);
+    state.spawnInterval = Math.max(400, 1400 - state.level * 75);
+    state.scoreAtLevelStart = state.score;
+    state.theme = getThemeForLevel(state.level);
     state.status = "levelComplete";
     sounds.levelUp();
   }
