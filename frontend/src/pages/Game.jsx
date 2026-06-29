@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock, Medal, Flame } from "lucide-react";
+import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock, Medal, Flame, Swords } from "lucide-react";
 import {
   createInitialState,
   resetForNewGame,
@@ -39,6 +39,7 @@ export default function Game() {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 720 });
   const [shopOpen, setShopOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
+  const [mpOpen, setMpOpen] = useState(false);
   const [board, setBoard] = useState([]);
   const [playerName, setName] = useState(() => getPlayerName());
   const [nameDraft, setNameDraft] = useState("");
@@ -414,7 +415,16 @@ export default function Game() {
                   onClick={startGame}
                   data-testid="start-game-button"
                 >
-                  <Play className="w-5 h-5 mr-2" /> Start Game
+                  <Play className="w-5 h-5 mr-2" /> Play
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full mt-2 font-bold text-base border-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50 btn-press"
+                  onClick={() => { sounds.click(); setMpOpen(true); }}
+                  data-testid="multiplayer-button"
+                >
+                  <Swords className="w-5 h-5 mr-2" /> Multiplayer
                 </Button>
                 <div className="mt-5 grid grid-cols-3 gap-2 text-[11px] text-slate-500">
                   <LegendChip color="bg-cyan-400" label="3x Multi" />
@@ -530,6 +540,29 @@ export default function Game() {
         draft={nameDraft}
         setDraft={setNameDraft}
       />
+      <Dialog open={mpOpen} onOpenChange={setMpOpen}>
+        <DialogContent className="max-w-lg bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 border-0 text-white" data-testid="multiplayer-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold">
+              <Swords className="w-6 h-6 text-orange-400" /> Multiplayer · Castle Siege
+            </DialogTitle>
+            <DialogDescription className="text-slate-300">
+              Real-time 1v1 PvP coming next iteration. Here&apos;s the locked-in design:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 text-sm text-slate-200">
+            <li>· Online matchmaking over WebSockets</li>
+            <li>· Castles start at <span className="font-bold text-amber-300">100 HP</span>, arrow on castle = <span className="font-bold">10 dmg</span></li>
+            <li>· Straighter arrow trajectory (gravity already reduced ✓)</li>
+            <li>· Fixed kit per match: <span className="font-bold text-cyan-300">2× Shield (5s)</span>, <span className="font-bold text-emerald-300">1× +30 HP Boost</span>, <span className="font-bold text-rose-300">2× Triple-Shot (5s)</span></li>
+            <li>· If an opponent&apos;s arrow hits your bow first → <span className="font-bold text-orange-300">tanked</span>, no damage</li>
+            <li>· Separate ranked leaderboard (ELO-style) for PvP</li>
+          </ul>
+          <Button className="mt-2 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => setMpOpen(false)} data-testid="multiplayer-close">
+            Got it
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

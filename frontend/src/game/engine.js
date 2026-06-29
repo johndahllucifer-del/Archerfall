@@ -2,7 +2,7 @@
 import { sounds } from "./sounds";
 import { BOWS, ITEMS, loadProgress, saveProgress, getThemeForLevel } from "./shop";
 
-export const GRAVITY = 0.32;
+export const GRAVITY = 0.12;
 export const BOW_X = 90;
 export const ARROW_LENGTH = 44;
 export const MAX_POWER = 22;
