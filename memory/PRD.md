@@ -68,6 +68,18 @@
 
 ### Deferred to Iteration 5
 - **Optional Emergent Google Auth** for cross-device name claiming. Needs `integration_playbook_expert_v2` for the Emergent Auth playbook, env wiring, and a profile/claim flow that ties the local `archery_player_name` to an authenticated identity server-side. Scoped out to keep this iteration focused.
+
+### Iteration 5 (2026-02)
+- **Gravity**: 0.32 → **0.12** for straighter arrow flight
+- **Main menu split**: "Play" + "Multiplayer" buttons. Multiplayer dialog locks in the design (100 HP, 2× Shield 5s, 1× +30 HP, 2× Triple-Shot 5s, arrow-tanks-on-bow, separate ranked board). PvP build deferred (WebSocket server is a multi-iter effort).
+
+### Iteration 6 (2026-02)
+- **Giant Balloon** (lvl 4+, 4 HP, 150 pts, fat lazy float)
+- **Zeppelin** (lvl 5+, 6 HP, 250 pts) — large airship with spinning propeller, cabin lights, tail fins, HP bar
+- **Mega Boss** every 10th level — 15+`level` HP, 1000 pts, crowned demonic balloon with rotating spikes, glowing eyes, 3-shot fireball fan attack pattern, drops 3 lives on escape (vs 1 for normal bosses)
+- **Boss fireballs now destructible**: arrows can shoot down incoming fireballs (+15 pts; +30 for mega-boss fireballs), with sparkle particles + shockwave ring
+- **More effects**: screen shake on hits/explosions/mega-boss spawn, expanding shockwave rings on explosions and mega-boss death, larger particle bursts for big enemies
+- Verified end-to-end via playwright: zero page errors during gameplay, smooth render
 - All 10 testing-agent flows passed (100%)
 
 ## Personas

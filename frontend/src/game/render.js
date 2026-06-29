@@ -357,6 +357,171 @@ const drawTarget = (ctx, t, time) => {
     ctx.beginPath(); ctx.arc(t.x - 6, t.y - 2, 4, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#000";
     ctx.beginPath(); ctx.arc(t.x - 6, t.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+  } else if (t.type === "giantBalloon") {
+    // Larger fancy balloon
+    ctx.fillStyle = t.color;
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y, t.r * 0.9, t.r, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.beginPath();
+    ctx.ellipse(t.x - t.r * 0.35, t.y - t.r * 0.4, t.r * 0.25, t.r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Stripes
+    ctx.strokeStyle = "rgba(0,0,0,0.15)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y, t.r * 0.6, t.r * 0.95, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Knot + string
+    ctx.fillStyle = t.color;
+    ctx.beginPath();
+    ctx.moveTo(t.x - 6, t.y + t.r);
+    ctx.lineTo(t.x + 6, t.y + t.r);
+    ctx.lineTo(t.x, t.y + t.r + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(60,60,60,0.6)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(t.x, t.y + t.r + 10);
+    ctx.quadraticCurveTo(t.x + 10, t.y + t.r + 40, t.x - 4, t.y + t.r + 70);
+    ctx.stroke();
+    // HP bar
+    const bw = 80, bh = 5;
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillRect(t.x - bw / 2, t.y - t.r - 16, bw, bh);
+    ctx.fillStyle = "#22c55e";
+    ctx.fillRect(t.x - bw / 2, t.y - t.r - 16, bw * (t.hp / t.maxHp), bh);
+  } else if (t.type === "zeppelin") {
+    // Body
+    ctx.save();
+    ctx.fillStyle = "#94a3b8";
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y, t.r * 1.55, t.r * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Stripe
+    ctx.fillStyle = "#475569";
+    ctx.fillRect(t.x - t.r * 1.5, t.y - 3, t.r * 3, 6);
+    // Nose cone
+    ctx.fillStyle = "#cbd5e1";
+    ctx.beginPath();
+    ctx.ellipse(t.x - t.r * 1.4, t.y, t.r * 0.4, t.r * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Cabin underneath
+    ctx.fillStyle = "#7c2d12";
+    ctx.fillRect(t.x - 22, t.y + t.r * 0.55, 44, 18);
+    ctx.fillStyle = "#fde68a";
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(t.x - 18 + i * 14, t.y + t.r * 0.55 + 4, 8, 10);
+    }
+    // Tail fins
+    ctx.fillStyle = "#475569";
+    ctx.beginPath();
+    ctx.moveTo(t.x + t.r * 1.5, t.y);
+    ctx.lineTo(t.x + t.r * 1.7, t.y - 22);
+    ctx.lineTo(t.x + t.r * 1.55, t.y - 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(t.x + t.r * 1.5, t.y);
+    ctx.lineTo(t.x + t.r * 1.7, t.y + 22);
+    ctx.lineTo(t.x + t.r * 1.55, t.y + 5);
+    ctx.closePath();
+    ctx.fill();
+    // Propeller (spinning)
+    const prop = t.propeller || 0;
+    ctx.save();
+    ctx.translate(t.x + t.r * 1.7, t.y);
+    ctx.rotate(prop);
+    ctx.fillStyle = "rgba(40,40,40,0.7)";
+    ctx.fillRect(-2, -16, 4, 32);
+    ctx.fillRect(-16, -2, 32, 4);
+    ctx.restore();
+    ctx.restore();
+    // HP bar
+    const bw = 110, bh = 6;
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(t.x - bw / 2, t.y - t.r * 0.7 - 18, bw, bh);
+    ctx.fillStyle = "#22c55e";
+    ctx.fillRect(t.x - bw / 2, t.y - t.r * 0.7 - 18, bw * (t.hp / t.maxHp), bh);
+  } else if (t.type === "megaBoss") {
+    // Massive crowned demon balloon
+    const pulse = 1 + Math.sin(time * 0.005) * 0.04;
+    ctx.fillStyle = "#7f1d1d";
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y, t.r * 0.95 * pulse, t.r * pulse, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Aura
+    const ag = ctx.createRadialGradient(t.x, t.y, t.r, t.x, t.y, t.r * 1.6);
+    ag.addColorStop(0, "rgba(239,68,68,0.4)");
+    ag.addColorStop(1, "rgba(239,68,68,0)");
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.arc(t.x, t.y, t.r * 1.6, 0, Math.PI * 2); ctx.fill();
+    // Spikes
+    ctx.fillStyle = "#450a0a";
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + time * 0.0008;
+      ctx.beginPath();
+      ctx.moveTo(t.x + Math.cos(a) * t.r, t.y + Math.sin(a) * t.r);
+      ctx.lineTo(t.x + Math.cos(a) * (t.r + 24), t.y + Math.sin(a) * (t.r + 24));
+      ctx.lineTo(t.x + Math.cos(a + 0.12) * t.r, t.y + Math.sin(a + 0.12) * t.r);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Crown
+    ctx.fillStyle = "#fbbf24";
+    ctx.beginPath();
+    ctx.moveTo(t.x - 35, t.y - t.r - 6);
+    ctx.lineTo(t.x - 30, t.y - t.r - 28);
+    ctx.lineTo(t.x - 12, t.y - t.r - 12);
+    ctx.lineTo(t.x, t.y - t.r - 34);
+    ctx.lineTo(t.x + 12, t.y - t.r - 12);
+    ctx.lineTo(t.x + 30, t.y - t.r - 28);
+    ctx.lineTo(t.x + 35, t.y - t.r - 6);
+    ctx.closePath();
+    ctx.fill();
+    // Glowing eyes
+    ctx.fillStyle = "#fde047";
+    const blink = (Math.sin(time * 0.004) + 1) * 0.5;
+    ctx.beginPath(); ctx.arc(t.x - 22, t.y - 8, 8 + blink * 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(t.x + 22, t.y - 8, 8 + blink * 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.arc(t.x - 22, t.y - 8, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(t.x + 22, t.y - 8, 3, 0, Math.PI * 2); ctx.fill();
+    // Mouth (fanged grin)
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(t.x, t.y + 22, 22, 0.1, Math.PI - 0.1);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < 5; i++) {
+      const fx = t.x - 14 + i * 7;
+      ctx.beginPath();
+      ctx.moveTo(fx, t.y + 22);
+      ctx.lineTo(fx + 3, t.y + 30);
+      ctx.lineTo(fx + 6, t.y + 22);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // HP bar (large)
+    const bw = 200, bh = 10;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(t.x - bw / 2, t.y - t.r - 32, bw, bh);
+    const hpFrac = t.hp / t.maxHp;
+    const hpGrad = ctx.createLinearGradient(t.x - bw / 2, 0, t.x + bw / 2, 0);
+    hpGrad.addColorStop(0, "#ef4444");
+    hpGrad.addColorStop(1, "#fbbf24");
+    ctx.fillStyle = hpGrad;
+    ctx.fillRect(t.x - bw / 2, t.y - t.r - 32, bw * hpFrac, bh);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(t.x - bw / 2, t.y - t.r - 32, bw, bh);
+    // Label
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 12px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("MEGA BOSS", t.x, t.y - t.r - 38);
   } else if (t.type === "boss") {
     // Boss balloon
     ctx.fillStyle = "#7c3aed";
@@ -449,6 +614,12 @@ const drawFloatTexts = (ctx, state) => {
 };
 
 export const drawScene = (ctx, state, time) => {
+  ctx.save();
+  if (state.shake && state.shake > 0.2) {
+    const sx = (Math.random() - 0.5) * state.shake;
+    const sy = (Math.random() - 0.5) * state.shake;
+    ctx.translate(sx, sy);
+  }
   drawBackground(ctx, state, time);
 
   // Slow-mo overlay
@@ -463,14 +634,26 @@ export const drawScene = (ctx, state, time) => {
   // Enemy projectiles (boss fireballs)
   for (const p of state.enemyProjectiles || []) {
     const flicker = Math.sin(time * 0.02 + p.t * 0.01) * 2;
-    const g = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, p.r + 8 + flicker);
-    g.addColorStop(0, "#fde68a");
-    g.addColorStop(0.5, "#f97316");
+    const baseR = (p.r || 10) + 8 + flicker;
+    const g = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, baseR);
+    g.addColorStop(0, p.mega ? "#fde68a" : "#fde68a");
+    g.addColorStop(0.5, p.mega ? "#dc2626" : "#f97316");
     g.addColorStop(1, "rgba(239,68,68,0)");
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 8 + flicker, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, baseR, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#fef3c7";
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, (p.r || 10) * 0.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // Shockwaves
+  for (const w of state.shockwaves || []) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, w.life);
+    ctx.strokeStyle = w.color || "#fff";
+    ctx.lineWidth = 4 * w.life;
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
   drawParticles(ctx, state);
   drawBow(ctx, state);
@@ -491,4 +674,5 @@ export const drawScene = (ctx, state, time) => {
     ctx.fillText(text, state.width / 2, 50);
     ctx.restore();
   }
+  ctx.restore();
 };

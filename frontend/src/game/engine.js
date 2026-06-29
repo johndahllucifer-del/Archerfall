@@ -48,6 +48,12 @@ export const createInitialState = (width, height) => {
     bestComboThisRun: 0,
     // Enemy projectiles (boss attacks)
     enemyProjectiles: [],
+    // Shockwave rings (visual effect for explosions/big hits)
+    shockwaves: [],
+    // Screen shake amount (px), decays per frame
+    shake: 0,
+    // Tracks whether mega boss already spawned this level
+    _megaBossSpawned: false,
     // Persistent progress (mirrored to localStorage)
     coins: prog.coins,
     ownedBows: prog.ownedBows,
@@ -115,6 +121,9 @@ export const resetForNewGame = (state) => {
   state.lastHitTime = 0;
   state.bestComboThisRun = 0;
   state.enemyProjectiles = [];
+  state.shockwaves = [];
+  state.shake = 0;
+  state._megaBossSpawned = false;
   state.status = "playing";
   state.theme = getThemeForLevel(1);
   state.lastSpawnTime = performance.now();
@@ -195,9 +204,15 @@ const spawnTarget = (state) => {
   const roll = Math.random();
   // Higher levels get more variety
   let type;
-  if (lvl >= 5 && roll < 0.15) type = "boss";
-  else if (lvl >= 3 && roll < 0.3) type = "flyer";
-  else if (roll < 0.55) type = "bullseye";
+  // Mega boss spawns at the start of every 10th level (and only one per level)
+  if (lvl % 10 === 0 && !state._megaBossSpawned) {
+    type = "megaBoss";
+    state._megaBossSpawned = true;
+  } else if (lvl >= 5 && roll < 0.08) type = "zeppelin";
+  else if (lvl >= 4 && roll < 0.16) type = "giantBalloon";
+  else if (lvl >= 5 && roll < 0.24) type = "boss";
+  else if (lvl >= 3 && roll < 0.36) type = "flyer";
+  else if (roll < 0.6) type = "bullseye";
   else type = "balloon";
 
   const baseSpeed = 1.3 + lvl * 0.22 + Math.random() * 0.7;
@@ -211,6 +226,16 @@ const spawnTarget = (state) => {
       vy: -0.4 - Math.random() * 0.3,
       sway: { amp: 8 + Math.random() * 8, freq: 0.002 + Math.random() * 0.002, t: 0 },
       hp: 1, points: 10, color: ["#f97316", "#ec4899", "#22d3ee", "#a3e635", "#fbbf24"][Math.floor(Math.random() * 5)],
+      alive: true,
+    });
+  } else if (type === "giantBalloon") {
+    state.targets.push({
+      type, x: state.width + 60, y: Math.max(150, y),
+      r: 60, vx: -baseSpeed * 0.55,
+      vy: -0.2,
+      sway: { amp: 16, freq: 0.0015, t: Math.random() * 1000 },
+      hp: 4, maxHp: 4, points: 150,
+      color: ["#f43f5e", "#3b82f6", "#facc15", "#a855f7"][Math.floor(Math.random() * 4)],
       alive: true,
     });
   } else if (type === "bullseye") {
@@ -235,6 +260,28 @@ const spawnTarget = (state) => {
       hp: 3, maxHp: 3, points: 100, alive: true,
       attackTimer: 1800 + Math.random() * 1500,
     });
+  } else if (type === "zeppelin") {
+    state.targets.push({
+      type, x: state.width + 110, y: Math.max(140, Math.min(state.height - 280, y)),
+      r: 80, vx: -baseSpeed * 0.45,
+      vy: 0,
+      bob: { amp: 10, freq: 0.0012, t: Math.random() * 1000 },
+      hp: 6, maxHp: 6, points: 250, alive: true,
+      propeller: 0,
+    });
+  } else if (type === "megaBoss") {
+    state.targets.push({
+      type, x: state.width + 130, y: Math.max(180, state.height / 2 - 50),
+      r: 95, vx: -baseSpeed * 0.35,
+      vy: 0,
+      bob: { amp: 32, freq: 0.0015, t: 0 },
+      hp: 15 + lvl, maxHp: 15 + lvl, points: 1000,
+      alive: true,
+      attackTimer: 1200,
+      isMega: true,
+    });
+    spawnFloatText(state, state.width / 2, 80, `⚠ MEGA BOSS LV.${lvl}`, "#ef4444");
+    state.shake = 12;
   }
 };
 
@@ -289,6 +336,9 @@ const activatePowerUp = (state, kind) => {
 const explodeAt = (state, x, y) => {
   sounds.explosion();
   spawnParticles(state, x, y, "#fb923c", 40, true);
+  state.shockwaves = state.shockwaves || [];
+  state.shockwaves.push({ x, y, r: 8, maxR: 130, life: 1, color: "#fb923c" });
+  state.shake = Math.max(state.shake || 0, 10);
   const radius = 95;
   state.targets.forEach((t) => {
     if (!t.alive) return;
@@ -330,8 +380,19 @@ const damageTarget = (state, target, dmg = 1) => {
     if (state.combo > 0 && state.combo % 5 === 0) {
       spawnFloatText(state, state.width / 2, 70, `${state.combo} COMBO!`, "#fb923c");
     }
-    spawnParticles(state, target.x, target.y, target.color || "#fbbf24", target.type === "boss" ? 28 : 16, target.type === "boss");
-    if (target.type === "balloon") sounds.pop();
+    spawnParticles(state, target.x, target.y, target.color || "#fbbf24", target.type === "boss" || target.type === "megaBoss" || target.type === "zeppelin" ? 36 : 16, target.type === "boss" || target.type === "megaBoss" || target.type === "zeppelin");
+    if (target.type === "megaBoss") {
+      state.shockwaves = state.shockwaves || [];
+      state.shockwaves.push({ x: target.x, y: target.y, r: 10, maxR: 220, life: 1, color: "#ef4444" });
+      state.shockwaves.push({ x: target.x, y: target.y, r: 4, maxR: 280, life: 1, color: "#fde68a" });
+      state.shake = Math.max(state.shake || 0, 22);
+      sounds.explosion();
+    } else if (target.type === "zeppelin" || target.type === "boss") {
+      state.shockwaves = state.shockwaves || [];
+      state.shockwaves.push({ x: target.x, y: target.y, r: 8, maxR: 140, life: 1, color: "#fde68a" });
+      state.shake = Math.max(state.shake || 0, 8);
+    }
+    if (target.type === "balloon" || target.type === "giantBalloon") sounds.pop();
     else sounds.hit();
     maybeDropPowerUp(state, target.x, target.y, target);
   } else {
@@ -354,6 +415,7 @@ const checkLevelUp = (state) => {
     state.spawnInterval = Math.max(400, 1400 - state.level * 75);
     state.scoreAtLevelStart = state.score;
     state.theme = getThemeForLevel(state.level);
+    state._megaBossSpawned = false;
     state.status = "levelComplete";
     sounds.levelUp();
   }
@@ -431,19 +493,48 @@ export const updatePhysics = (state, dt) => {
           x: t.x - t.r, y: t.y,
           vx: (dx / dist) * speed,
           vy: (dy / dist) * speed,
-          r: 10, t: 0, alive: true,
+          r: 10, t: 0, alive: true, hp: 1,
         });
         t.attackTimer = 1500 + Math.random() * 1500;
+      }
+    } else if (t.type === "giantBalloon") {
+      t.sway.t += dt * slow;
+      t.y += t.vy * slow + Math.sin(t.sway.t * t.sway.freq) * 0.4;
+    } else if (t.type === "zeppelin") {
+      t.bob.t += dt * slow;
+      t.y += Math.sin(t.bob.t * t.bob.freq) * 0.4;
+      t.propeller = (t.propeller || 0) + dt * 0.02 * slow;
+    } else if (t.type === "megaBoss") {
+      t.bob.t += dt * slow;
+      t.y += Math.sin(t.bob.t * t.bob.freq) * 0.8;
+      // Mega boss stops at right portion of screen
+      if (t.x < state.width - 180) t.vx = 0;
+      t.attackTimer -= dt * slow;
+      if (t.attackTimer <= 0 && t.x < state.width - 30) {
+        // Fire a 3-shot fan at the bow
+        const baseAngle = Math.atan2(state.bow.y - t.y, state.bow.x - t.x);
+        for (const offset of [-0.18, 0, 0.18]) {
+          const a = baseAngle + offset;
+          state.enemyProjectiles.push({
+            x: t.x - t.r, y: t.y,
+            vx: Math.cos(a) * 5.5,
+            vy: Math.sin(a) * 5.5,
+            r: 12, t: 0, alive: true, hp: 1, mega: true,
+          });
+        }
+        t.attackTimer = 1100 + Math.random() * 700;
       }
     }
     // Missed target - reached the bow side
     if (t.x < -40) {
       t.alive = false;
-      // Bosses & flyers cost a life if they escape
-      if (t.type === "boss" || t.type === "flyer") {
-        state.lives -= 1;
+      // Bosses, flyers, zeppelins & megaBoss cost a life if they escape
+      const costly = ["boss", "flyer", "zeppelin", "megaBoss"];
+      if (costly.includes(t.type)) {
+        const cost = t.type === "megaBoss" ? 3 : 1;
+        state.lives -= cost;
         sounds.miss();
-        spawnFloatText(state, 60, state.height - 40, "-1 LIFE", "#ef4444");
+        spawnFloatText(state, 60, state.height - 40, `-${cost} LIFE`, "#ef4444");
         if (state.lives <= 0) {
           state.status = "gameOver";
           sounds.gameOver();
@@ -498,13 +589,29 @@ export const updatePhysics = (state, dt) => {
   }
   state.drops = state.drops.filter((d) => d.alive);
 
-  // Enemy projectiles (boss fireballs)
+  // Enemy projectiles (boss fireballs) — now also destructible by arrows
   for (const p of state.enemyProjectiles) {
     if (!p.alive) continue;
     p.t += dt * slow;
     p.x += p.vx * slow;
     p.y += p.vy * slow;
     if (p.x < -30 || p.y > state.height + 30 || p.y < -30) p.alive = false;
+    // Player arrow can shoot down the fireball
+    for (const a of state.arrows) {
+      if (!a.alive) continue;
+      const adx = a.x - p.x, ady = a.y - p.y;
+      if (adx * adx + ady * ady < (p.r + 6) ** 2) {
+        p.alive = false;
+        a.alive = false;
+        state.score += p.mega ? 30 : 15;
+        spawnFloatText(state, p.x, p.y, p.mega ? "+30" : "+15", "#22d3ee");
+        spawnParticles(state, p.x, p.y, "#fde68a", 14, true);
+        state.shockwaves.push({ x: p.x, y: p.y, r: 6, maxR: 60, life: 1, color: "#fde68a" });
+        sounds.hit();
+        break;
+      }
+    }
+    if (!p.alive) continue;
     // Collide with bow (player)
     const dx = p.x - state.bow.x, dy = p.y - state.bow.y;
     if (dx * dx + dy * dy < (28) ** 2) {
@@ -513,6 +620,7 @@ export const updatePhysics = (state, dt) => {
       state.combo = 0; // break combo on hit
       sounds.miss();
       spawnParticles(state, p.x, p.y, "#fb923c", 14, true);
+      state.shake = Math.max(state.shake || 0, 14);
       spawnFloatText(state, 60, state.height - 40, "-1 LIFE", "#ef4444");
       if (state.lives <= 0) {
         state.status = "gameOver";
@@ -521,6 +629,16 @@ export const updatePhysics = (state, dt) => {
     }
   }
   state.enemyProjectiles = state.enemyProjectiles.filter((p) => p.alive);
+
+  // Shockwaves
+  for (const w of state.shockwaves || []) {
+    w.r += (w.maxR - w.r) * 0.18;
+    w.life -= 0.04;
+  }
+  state.shockwaves = (state.shockwaves || []).filter((w) => w.life > 0);
+
+  // Screen shake decay
+  if (state.shake > 0) state.shake = Math.max(0, state.shake - 0.6);
 
   // Reset combo if timeout exceeded
   if (state.combo > 0 && performance.now() - state.lastHitTime > state.comboTimeoutMs) {
