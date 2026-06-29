@@ -343,6 +343,7 @@ async def matchmaking_socket(websocket: WebSocket):
         })
 
         if len(waiting_players) >= 2:
+            print("🔥 MATCH FOUND!")
             p1 = waiting_players.pop(0)
             p2 = waiting_players.pop(0)
             room_id = str(uuid.uuid4())
