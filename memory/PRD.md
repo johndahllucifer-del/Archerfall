@@ -50,6 +50,16 @@
   - Extra Heart (400): start runs with 4 lives
 - **Theme cycle** by level (day → sunset → night, repeats every 6): night has moon, stars, fireflies; sunset has low burning sun and warmer palette
 - **More levels** via dynamically increasing target counts and faster spawn intervals (capped at 400ms)
+
+### Iteration 3 (2026-02)
+- **Combo / streak multiplier**: chain hits within 2.5s. 3=×1.5, 5=×2, 8=×3, 12+=×5. Big "x3 STREAK" badge in scene.
+- **Boss attack patterns**: bosses periodically fire glowing fireballs aimed at the bow; player loses a life & combo on hit
+- **Ruby Bow** (1800, Legendary): every arrow explodes on impact, no power-up needed
+- **Arrow Magnet** item (550): power-up crates fly toward your nearest arrow within 220px
+- **Global Leaderboard** (backend): `POST /api/leaderboard/submit` and `GET /api/leaderboard/top?limit=100`. Stored in MongoDB collection `leaderboard`, keyed by lowercase name, keeps best (highest level, then score).
+- **Name prompt dialog** on first launch, name saved to localStorage `archery_player_name`
+- **Phoenix Bow** (Mythic, gated): 5-arrow flaming spread, ×2.5 score, ×1.5 arrow speed — only equippable while your name is in the top 3 of the global leaderboard.
+- All 12 testing-agent checks passed (100% backend + 100% frontend)
 - All 10 testing-agent flows passed (100%)
 
 ## Personas
