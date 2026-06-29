@@ -686,8 +686,8 @@ export default function Game() {
   socket.onerror = () => {
     console.error("WebSocket connection failed");
   };
-}}
-           }}      
+ }}
+                 
      data-testid="multiplayer-find-match"
             >
             Find Match
