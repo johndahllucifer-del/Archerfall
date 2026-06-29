@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 3 testing: leaderboard backend (submit/top/validation), name dialog gate, leaderboard dialog, shop bow/item additions (Ruby, Phoenix gating, Magnet), Phoenix unlock via top-3 player name, and core gameplay regression. All scoped checks passed.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "GET /api/leaderboard/top?limit=5 returns 200 with seeded Robin (Lvl12, 4200) and Seed1 (Lvl7, 2400) sorted by level DESC then score DESC",
+    "POST /api/leaderboard/submit with valid {name:T1Tester,level:3,score:500} returns 200 and entry",
+    "Re-submitting lower {level:1,score:50} does NOT overwrite — server returns previous best (3/500)",
+    "Re-submitting higher {level:5,score:900} overwrites — server returns new best",
+    "Validation 422: name length 1, level<1, score<0 all return 422 with pydantic errors",
+    "Frontend NameDialog (data-testid=name-dialog) is shown when archery_player_name not in localStorage; closes after entering 2+ char name and clicking name-save-button",
+    "Header open-leaderboard-button opens leaderboard-dialog and renders Robin entry",
+    "Shop displays shop-bow-ruby (Legendary, 1800) and shop-bow-phoenix (Mythic). With non-top-3 player name, shop-bow-phoenix-locked badge present",
+    "Buying Ruby decreases coins 3000 -> 1200 and badge becomes 'Equipped'",
+    "Setting archery_player_name='Robin' (top-3) removes shop-bow-phoenix-locked badge -> Phoenix becomes equippable (phoenixUnlocked=true)",
+    "Items tab shows shop-item-magnet (and others) — total item count 10 testids visible",
+    "Regression: start-game-button starts gameplay; pause-button visible during play; header shows Score/Level/Hits/Lives"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Used REACT_APP_BACKEND_URL https://bow-quest-6.preview.emergentagent.com (frontend/.env) not the URL in the request which differed. Combo multiplier & boss fireball patterns are RNG/gameplay dependent and were not deterministically validated — deferred to full testing pass."
+}

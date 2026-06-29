@@ -5,7 +5,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock, Medal, Flame } from "lucide-react";
 import {
   createInitialState,
   resetForNewGame,
@@ -20,6 +21,7 @@ import {
 import { drawScene } from "@/game/render";
 import { initAudio, setSoundEnabled, sounds } from "@/game/sounds";
 import { BOWS, ITEMS } from "@/game/shop";
+import { submitScore, fetchLeaderboard, getPlayerName, setPlayerName } from "@/services/leaderboard";
 
 const HIGH_SCORE_KEY = "archery_high_score_v1";
 
@@ -36,6 +38,11 @@ export default function Game() {
   const [soundOn, setSoundOn] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 720 });
   const [shopOpen, setShopOpen] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [board, setBoard] = useState([]);
+  const [playerName, setName] = useState(() => getPlayerName());
+  const [nameDraft, setNameDraft] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   // Setup canvas size to viewport
   useEffect(() => {
@@ -93,6 +100,37 @@ export default function Game() {
       localStorage.setItem(HIGH_SCORE_KEY, String(state.score));
       setHighScore(state.score);
     }
+  });
+
+  // Refresh leaderboard + update Phoenix gate based on top 3
+  const refreshLeaderboard = useCallback(async () => {
+    const data = await fetchLeaderboard(100);
+    setBoard(data);
+    const state = stateRef.current;
+    if (state) {
+      const top3Names = data.slice(0, 3).map((e) => (e.name || "").toLowerCase());
+      const myName = (playerName || "").toLowerCase();
+      state.phoenixUnlocked = !!(myName && top3Names.includes(myName));
+      forceUpdate();
+    }
+  }, [playerName, forceUpdate]);
+
+  useEffect(() => {
+    refreshLeaderboard();
+  }, [refreshLeaderboard]);
+
+  // Submit score on game over
+  useEffect(() => {
+    const state = stateRef.current;
+    if (!state) return;
+    if (state.status === "gameOver" && playerName && !submitted) {
+      setSubmitted(true);
+      (async () => {
+        await submitScore(playerName, state.level, state.score);
+        await refreshLeaderboard();
+      })();
+    }
+    if (state?.status !== "gameOver" && submitted) setSubmitted(false);
   });
 
   // Mouse handlers
@@ -215,6 +253,15 @@ export default function Game() {
               data-testid="open-shop-button"
             >
               <ShoppingBag className="w-4 h-4 mr-1" /> Shop
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white/80 btn-press"
+              onClick={() => { sounds.click(); refreshLeaderboard(); setBoardOpen(true); }}
+              data-testid="open-leaderboard-button"
+            >
+              <Medal className="w-4 h-4 mr-1" /> Leaderboard
             </Button>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-white shadow-sm">
               <Trophy className="w-4 h-4 text-amber-500" />
@@ -403,6 +450,21 @@ export default function Game() {
         onEquipBow={handleEquipBow}
         onBuyItem={handleBuyItem}
       />
+      <LeaderboardDialog
+        open={boardOpen}
+        onOpenChange={setBoardOpen}
+        board={board}
+        playerName={playerName}
+      />
+      <NameDialog
+        open={!playerName}
+        onSave={(n) => {
+          const saved = setPlayerName(n);
+          if (saved) setName(saved);
+        }}
+        draft={nameDraft}
+        setDraft={setNameDraft}
+      />
     </div>
   );
 }
@@ -458,12 +520,13 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
           </TabsList>
           <TabsContent value="bows" className="mt-4 grid sm:grid-cols-2 gap-3 max-h-[55vh] overflow-y-auto pr-1">
             {Object.values(BOWS).map((bow) => {
-              const owned = state.ownedBows.includes(bow.id);
+              const owned = state.ownedBows.includes(bow.id) || (bow.id === "phoenix" && state.phoenixUnlocked);
               const equipped = state.equippedBow === bow.id;
               const canAfford = state.coins >= bow.cost;
               const Icon = bow.icon;
+              const phoenixLocked = bow.id === "phoenix" && !state.phoenixUnlocked;
               return (
-                <Card key={bow.id} className="p-4 border border-slate-200/70 bg-white/80" data-testid={`shop-bow-${bow.id}`}>
+                <Card key={bow.id} className={`p-4 border bg-white/80 ${bow.id === "phoenix" ? "border-orange-300 bg-gradient-to-br from-amber-50 to-orange-100" : "border-slate-200/70"}`} data-testid={`shop-bow-${bow.id}`}>
                   <div className="flex items-start gap-3">
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
@@ -474,7 +537,7 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <div className="font-bold text-slate-800">{bow.name}</div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{bow.rarity}</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${bow.rarity === "Mythic" ? "text-orange-600" : "text-slate-400"}`}>{bow.rarity}</span>
                       </div>
                       <div className="text-xs text-slate-500 mt-0.5">{bow.desc}</div>
                     </div>
@@ -484,6 +547,8 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
                       <span className="flex items-center gap-1 text-sm font-mono-game font-bold text-amber-700">
                         <Coins className="w-3.5 h-3.5" /> {bow.cost}
                       </span>
+                    ) : bow.id === "phoenix" ? (
+                      <span className="text-xs font-bold text-orange-600 flex items-center gap-1"><Flame className="w-3.5 h-3.5" /> Top-3 reward</span>
                     ) : (
                       <span className="text-xs text-slate-400">Starter</span>
                     )}
@@ -491,6 +556,10 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
                       <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white" data-testid={`shop-bow-${bow.id}-equipped`}>
                         <Check className="w-3 h-3 mr-1" /> Equipped
                       </Badge>
+                    ) : phoenixLocked ? (
+                      <Button size="sm" disabled className="bg-slate-300 text-slate-600" data-testid={`shop-bow-${bow.id}-locked`}>
+                        <Lock className="w-3 h-3 mr-1" /> Top 3 only
+                      </Button>
                     ) : owned ? (
                       <Button size="sm" variant="outline" onClick={() => onEquipBow(bow.id)} data-testid={`shop-bow-${bow.id}-equip`}>
                         Equip
@@ -556,3 +625,93 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
     </Dialog>
   );
 };
+
+
+const LeaderboardDialog = ({ open, onOpenChange, board, playerName }) => {
+  const myLc = (playerName || "").toLowerCase();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 border-0 shadow-2xl text-white" data-testid="leaderboard-dialog">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold">
+            <Medal className="w-6 h-6 text-amber-400" />
+            Global Leaderboard
+            <span className="ml-auto text-xs text-slate-400 font-normal">Top 100 · Sorted by level then score</span>
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
+            Finish each run to submit your best level. The top 3 archers unlock the legendary{" "}
+            <span className="text-orange-400 font-bold">Phoenix Bow</span>.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto pr-1" data-testid="leaderboard-list">
+          {board.length === 0 && (
+            <div className="text-center py-12 text-slate-400 text-sm">No scores yet. Be the first to make legend!</div>
+          )}
+          {board.map((row, i) => {
+            const rank = i + 1;
+            const isMe = (row.name || "").toLowerCase() === myLc;
+            const medalColor =
+              rank === 1 ? "from-amber-300 to-yellow-500" :
+              rank === 2 ? "from-slate-300 to-slate-400" :
+              rank === 3 ? "from-orange-400 to-amber-700" : "from-slate-700 to-slate-800";
+            return (
+              <div
+                key={`${row.name}-${i}`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg mb-1.5 ${isMe ? "bg-orange-500/30 border border-orange-400/60" : "bg-white/5 border border-white/10"}`}
+                data-testid={`leaderboard-row-${rank}`}
+              >
+                <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${medalColor} flex items-center justify-center font-mono-game font-bold text-slate-900 text-sm`}>
+                  {rank <= 3 ? <Medal className="w-4 h-4" /> : rank}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold truncate flex items-center gap-2">
+                    {row.name}
+                    {isMe && <span className="text-[10px] uppercase tracking-wider text-orange-300">You</span>}
+                    {rank <= 3 && <Flame className="w-3.5 h-3.5 text-orange-400" />}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono-game font-bold text-amber-300">Lvl {row.level}</div>
+                  <div className="font-mono-game text-xs text-slate-400">{row.score} pts</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const NameDialog = ({ open, onSave, draft, setDraft }) => (
+  <Dialog open={open}>
+    <DialogContent className="max-w-md bg-gradient-to-br from-amber-50 to-orange-100 border-0 shadow-2xl" data-testid="name-dialog">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2 text-2xl font-extrabold text-slate-800">
+          <Medal className="w-6 h-6 text-amber-500" /> Pick your archer name
+        </DialogTitle>
+        <DialogDescription className="text-slate-600">
+          This is the name shown on the global leaderboard. 2–16 characters. You can&apos;t change it later.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="space-y-3">
+        <Input
+          placeholder="e.g. Robin"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          maxLength={16}
+          className="bg-white"
+          data-testid="name-input"
+        />
+        <Button
+          className="w-full bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold btn-press"
+          disabled={(draft || "").trim().length < 2}
+          onClick={() => onSave(draft)}
+          data-testid="name-save-button"
+        >
+          Begin Adventure
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+);

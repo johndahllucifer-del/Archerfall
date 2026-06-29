@@ -41,11 +41,20 @@ export const createInitialState = (width, height) => {
     status: "menu",
     lastSpawnTime: performance.now(),
     theme: "day",
+    // Combo / streak
+    combo: 0,
+    lastHitTime: 0,
+    comboTimeoutMs: 2500,
+    bestComboThisRun: 0,
+    // Enemy projectiles (boss attacks)
+    enemyProjectiles: [],
     // Persistent progress (mirrored to localStorage)
     coins: prog.coins,
     ownedBows: prog.ownedBows,
     ownedItems: prog.ownedItems,
     equippedBow: prog.equippedBow,
+    // Top-3 gate for Phoenix bow (set externally by frontend after leaderboard fetch)
+    phoenixUnlocked: false,
   };
 };
 
@@ -58,18 +67,20 @@ export const persistProgress = (state) => {
   });
 };
 
-export const buyBow = (state, bowId) => {
-  const bow = BOWS[bowId];
-  if (!bow || state.ownedBows.includes(bowId) || state.coins < bow.cost) return false;
-  state.coins -= bow.cost;
-  state.ownedBows.push(bowId);
+export const equipBow = (state, bowId) => {
+  if (bowId === "phoenix" && !state.phoenixUnlocked) return false;
+  if (!state.ownedBows.includes(bowId) && bowId !== "phoenix") return false;
   state.equippedBow = bowId;
   persistProgress(state);
   return true;
 };
 
-export const equipBow = (state, bowId) => {
-  if (!state.ownedBows.includes(bowId)) return false;
+export const buyBow = (state, bowId) => {
+  const bow = BOWS[bowId];
+  if (!bow || state.ownedBows.includes(bowId) || state.coins < bow.cost) return false;
+  if (bow.gated) return false;
+  state.coins -= bow.cost;
+  state.ownedBows.push(bowId);
   state.equippedBow = bowId;
   persistProgress(state);
   return true;
@@ -100,6 +111,10 @@ export const resetForNewGame = (state) => {
   state.floatTexts = [];
   state.activePowerUp = null;
   state.slowmoFactor = 1;
+  state.combo = 0;
+  state.lastHitTime = 0;
+  state.bestComboThisRun = 0;
+  state.enemyProjectiles = [];
   state.status = "playing";
   state.theme = getThemeForLevel(1);
   state.lastSpawnTime = performance.now();
@@ -135,7 +150,9 @@ export const releaseShot = (state) => {
 
   const angle = state.bow.angle;
   const isTriple = state.activePowerUp?.type === "triple" && state.activePowerUp.ammo > 0;
-  const isExplosive = state.activePowerUp?.type === "explosive" && state.activePowerUp.ammo > 0;
+  const isExplosive =
+    (state.activePowerUp?.type === "explosive" && state.activePowerUp.ammo > 0) ||
+    bow.explosiveByDefault === true;
 
   // Determine arrow count: bow's intrinsic count, boosted by triple powerup
   let arrowCount = bow.arrowCount;
@@ -164,9 +181,11 @@ export const releaseShot = (state) => {
     });
   });
 
-  if (isTriple || isExplosive) {
-    state.activePowerUp.ammo -= 1;
-    if (state.activePowerUp.ammo <= 0) state.activePowerUp = null;
+  if (isTriple || (isExplosive && !bow.explosiveByDefault)) {
+    if (state.activePowerUp) {
+      state.activePowerUp.ammo -= 1;
+      if (state.activePowerUp.ammo <= 0) state.activePowerUp = null;
+    }
   }
   sounds.arrowShoot();
 };
@@ -214,6 +233,7 @@ const spawnTarget = (state) => {
       r: 44, vx: -baseSpeed * 0.7, vy: 0,
       bob: { amp: 28, freq: 0.002, t: Math.random() * 1000 },
       hp: 3, maxHp: 3, points: 100, alive: true,
+      attackTimer: 1800 + Math.random() * 1500,
     });
   }
 };
@@ -279,15 +299,37 @@ const explodeAt = (state, x, y) => {
   });
 };
 
+const getComboMult = (combo) => {
+  if (combo >= 12) return 5;
+  if (combo >= 8) return 3;
+  if (combo >= 5) return 2;
+  if (combo >= 3) return 1.5;
+  return 1;
+};
+
 const damageTarget = (state, target, dmg = 1) => {
   target.hp -= dmg;
   if (target.hp <= 0) {
     target.alive = false;
     const bow = BOWS[state.equippedBow] || BOWS.wooden;
-    const earned = Math.round(target.points * bow.scoreMult);
+    // Update combo
+    const now = performance.now();
+    if (state.lastHitTime && now - state.lastHitTime <= state.comboTimeoutMs) {
+      state.combo += 1;
+    } else {
+      state.combo = 1;
+    }
+    state.lastHitTime = now;
+    if (state.combo > state.bestComboThisRun) state.bestComboThisRun = state.combo;
+    const comboMult = getComboMult(state.combo);
+    const earned = Math.round(target.points * bow.scoreMult * comboMult);
     state.score += earned;
     state.targetsHit += 1;
-    spawnFloatText(state, target.x, target.y, `+${earned}`);
+    const label = comboMult > 1 ? `+${earned} ×${comboMult}` : `+${earned}`;
+    spawnFloatText(state, target.x, target.y, label, comboMult >= 3 ? "#ef4444" : "#fbbf24");
+    if (state.combo > 0 && state.combo % 5 === 0) {
+      spawnFloatText(state, state.width / 2, 70, `${state.combo} COMBO!`, "#fb923c");
+    }
     spawnParticles(state, target.x, target.y, target.color || "#fbbf24", target.type === "boss" ? 28 : 16, target.type === "boss");
     if (target.type === "balloon") sounds.pop();
     else sounds.hit();
@@ -378,6 +420,21 @@ export const updatePhysics = (state, dt) => {
     } else if (t.type === "boss") {
       t.bob.t += dt * slow;
       t.y += Math.sin(t.bob.t * t.bob.freq) * 0.6;
+      // Boss attack
+      t.attackTimer -= dt * slow;
+      if (t.attackTimer <= 0 && t.x < state.width - 30) {
+        const dx = state.bow.x - t.x;
+        const dy = state.bow.y - t.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const speed = 5.5;
+        state.enemyProjectiles.push({
+          x: t.x - t.r, y: t.y,
+          vx: (dx / dist) * speed,
+          vy: (dy / dist) * speed,
+          r: 10, t: 0, alive: true,
+        });
+        t.attackTimer = 1500 + Math.random() * 1500;
+      }
     }
     // Missed target - reached the bow side
     if (t.x < -40) {
@@ -396,13 +453,36 @@ export const updatePhysics = (state, dt) => {
   }
   state.targets = state.targets.filter((t) => t.alive);
 
-  // Drops
+  // Drops (with optional magnet attraction)
+  const magnet = state.ownedItems.includes("magnet");
   for (const d of state.drops) {
     if (!d.alive) continue;
     d.t += dt * slow;
-    d.y += d.vy * slow;
-    d.x -= 0.4 * slow;
-    if (d.y > state.height - 80) d.vy = -d.vy * 0.5;
+    if (magnet && state.arrows.length > 0) {
+      // pull toward nearest arrow within 220px
+      let nearest = null;
+      let nd = 220 * 220;
+      for (const a of state.arrows) {
+        if (!a.alive) continue;
+        const dx = a.x - d.x, dy = a.y - d.y;
+        const dist2 = dx * dx + dy * dy;
+        if (dist2 < nd) { nd = dist2; nearest = a; }
+      }
+      if (nearest) {
+        const dx = nearest.x - d.x, dy = nearest.y - d.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        d.x += (dx / dist) * 4.5 * slow;
+        d.y += (dy / dist) * 4.5 * slow;
+      } else {
+        d.y += d.vy * slow;
+        d.x -= 0.4 * slow;
+        if (d.y > state.height - 80) d.vy = -d.vy * 0.5;
+      }
+    } else {
+      d.y += d.vy * slow;
+      d.x -= 0.4 * slow;
+      if (d.y > state.height - 80) d.vy = -d.vy * 0.5;
+    }
     if (d.x < -40 || d.t > 8000) d.alive = false;
     // Check arrow collision
     for (const a of state.arrows) {
@@ -417,6 +497,35 @@ export const updatePhysics = (state, dt) => {
     }
   }
   state.drops = state.drops.filter((d) => d.alive);
+
+  // Enemy projectiles (boss fireballs)
+  for (const p of state.enemyProjectiles) {
+    if (!p.alive) continue;
+    p.t += dt * slow;
+    p.x += p.vx * slow;
+    p.y += p.vy * slow;
+    if (p.x < -30 || p.y > state.height + 30 || p.y < -30) p.alive = false;
+    // Collide with bow (player)
+    const dx = p.x - state.bow.x, dy = p.y - state.bow.y;
+    if (dx * dx + dy * dy < (28) ** 2) {
+      p.alive = false;
+      state.lives -= 1;
+      state.combo = 0; // break combo on hit
+      sounds.miss();
+      spawnParticles(state, p.x, p.y, "#fb923c", 14, true);
+      spawnFloatText(state, 60, state.height - 40, "-1 LIFE", "#ef4444");
+      if (state.lives <= 0) {
+        state.status = "gameOver";
+        sounds.gameOver();
+      }
+    }
+  }
+  state.enemyProjectiles = state.enemyProjectiles.filter((p) => p.alive);
+
+  // Reset combo if timeout exceeded
+  if (state.combo > 0 && performance.now() - state.lastHitTime > state.comboTimeoutMs) {
+    state.combo = 0;
+  }
 
   // Particles
   for (const p of state.particles) {

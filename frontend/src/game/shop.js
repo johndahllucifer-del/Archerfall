@@ -1,5 +1,5 @@
 // Shop catalog + persistence helpers.
-import { Crown, Gem, Sparkles, Zap, Eye, Heart, Clover } from "lucide-react";
+import { Crown, Gem, Sparkles, Zap, Eye, Heart, Clover, Bomb, Flame, Magnet } from "lucide-react";
 
 export const BOWS = {
   wooden: {
@@ -10,6 +10,7 @@ export const BOWS = {
     arrowCount: 1,
     scoreMult: 1,
     arrowSpeedMult: 1,
+    explosiveByDefault: false,
     color: "#7a4a2a",
     accent: "#3a2418",
     icon: Crown,
@@ -23,6 +24,7 @@ export const BOWS = {
     arrowCount: 2,
     scoreMult: 1,
     arrowSpeedMult: 1,
+    explosiveByDefault: false,
     color: "#10b981",
     accent: "#065f46",
     icon: Gem,
@@ -36,6 +38,7 @@ export const BOWS = {
     arrowCount: 3,
     scoreMult: 1,
     arrowSpeedMult: 1,
+    explosiveByDefault: false,
     color: "#a855f7",
     accent: "#581c87",
     icon: Sparkles,
@@ -49,10 +52,40 @@ export const BOWS = {
     arrowCount: 1,
     scoreMult: 1.5,
     arrowSpeedMult: 1.35,
+    explosiveByDefault: false,
     color: "#67e8f9",
     accent: "#0891b2",
     icon: Gem,
     rarity: "Legendary",
+  },
+  ruby: {
+    id: "ruby",
+    name: "Ruby Bow",
+    desc: "Every arrow explodes on impact.",
+    cost: 1800,
+    arrowCount: 1,
+    scoreMult: 1.2,
+    arrowSpeedMult: 1.1,
+    explosiveByDefault: true,
+    color: "#ef4444",
+    accent: "#7f1d1d",
+    icon: Bomb,
+    rarity: "Legendary",
+  },
+  phoenix: {
+    id: "phoenix",
+    name: "Phoenix Bow",
+    desc: "TOP 3 ONLY · 5 flaming arrows, 2.5x score.",
+    cost: 0,
+    arrowCount: 5,
+    scoreMult: 2.5,
+    arrowSpeedMult: 1.5,
+    explosiveByDefault: false,
+    color: "#fb923c",
+    accent: "#9a3412",
+    icon: Flame,
+    rarity: "Mythic",
+    gated: true, // Only unlocked while in top 3 of leaderboard
   },
 };
 
@@ -88,6 +121,14 @@ export const ITEMS = {
     cost: 400,
     icon: Heart,
     color: "from-rose-400 to-pink-600",
+  },
+  magnet: {
+    id: "magnet",
+    name: "Arrow Magnet",
+    desc: "Power-up crates fly toward your arrows.",
+    cost: 550,
+    icon: Magnet,
+    color: "from-violet-500 to-purple-700",
   },
 };
 

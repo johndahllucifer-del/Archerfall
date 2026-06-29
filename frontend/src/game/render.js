@@ -460,7 +460,35 @@ export const drawScene = (ctx, state, time) => {
   for (const t of state.targets) drawTarget(ctx, t, time);
   for (const d of state.drops) drawDrop(ctx, d, time);
   for (const a of state.arrows) drawArrow(ctx, a);
+  // Enemy projectiles (boss fireballs)
+  for (const p of state.enemyProjectiles || []) {
+    const flicker = Math.sin(time * 0.02 + p.t * 0.01) * 2;
+    const g = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, p.r + 8 + flicker);
+    g.addColorStop(0, "#fde68a");
+    g.addColorStop(0.5, "#f97316");
+    g.addColorStop(1, "rgba(239,68,68,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 8 + flicker, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fef3c7";
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5, 0, Math.PI * 2); ctx.fill();
+  }
   drawParticles(ctx, state);
   drawBow(ctx, state);
   drawFloatTexts(ctx, state);
+
+  // Combo badge in top-center while active
+  if (state.combo >= 3) {
+    const mult = state.combo >= 12 ? 5 : state.combo >= 8 ? 3 : state.combo >= 5 ? 2 : 1.5;
+    ctx.save();
+    ctx.font = "bold 28px 'Bricolage Grotesque', sans-serif";
+    ctx.textAlign = "center";
+    const color = mult >= 3 ? "#ef4444" : "#fb923c";
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 4;
+    const text = `×${mult}  ·  ${state.combo} STREAK`;
+    ctx.strokeText(text, state.width / 2, 50);
+    ctx.fillText(text, state.width / 2, 50);
+    ctx.restore();
+  }
 };

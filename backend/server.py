@@ -66,6 +66,65 @@ async def get_status_checks():
     
     return status_checks
 
+
+# ===== Leaderboard =====
+class LeaderboardSubmit(BaseModel):
+    name: str = Field(..., min_length=2, max_length=16)
+    level: int = Field(..., ge=1)
+    score: int = Field(..., ge=0)
+
+
+class LeaderboardEntry(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: str
+    level: int
+    score: int
+    updated_at: str
+
+
+@api_router.post("/leaderboard/submit", response_model=LeaderboardEntry)
+async def submit_leaderboard(payload: LeaderboardSubmit):
+    name = payload.name.strip()
+    safe_name = "".join(ch for ch in name if ch.isalnum() or ch in "-_ ").strip()[:16]
+    if len(safe_name) < 2:
+        safe_name = "Archer"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    existing = await db.leaderboard.find_one({"name_lc": safe_name.lower()}, {"_id": 0})
+    new_entry = {
+        "name": safe_name,
+        "name_lc": safe_name.lower(),
+        "level": payload.level,
+        "score": payload.score,
+        "updated_at": now_iso,
+    }
+    if existing:
+        # Keep best: higher level wins; tie-break by score
+        better = (
+            payload.level > existing["level"]
+            or (payload.level == existing["level"] and payload.score > existing["score"])
+        )
+        if better:
+            await db.leaderboard.update_one(
+                {"name_lc": safe_name.lower()},
+                {"$set": new_entry},
+            )
+        else:
+            new_entry = existing
+    else:
+        await db.leaderboard.insert_one(new_entry)
+    return LeaderboardEntry(**new_entry)
+
+
+@api_router.get("/leaderboard/top", response_model=List[LeaderboardEntry])
+async def get_leaderboard_top(limit: int = 100):
+    limit = max(1, min(100, limit))
+    rows = (
+        await db.leaderboard.find({}, {"_id": 0, "name_lc": 0})
+        .sort([("level", -1), ("score", -1)])
+        .to_list(limit)
+    )
+    return rows
+
 # Include the router in the main app
 app.include_router(api_router)
 
