@@ -683,7 +683,17 @@ export default function Game() {
   console.log("✅ WebSocket Connected");
 };              
 
-  socket.onmessage = (event) => {
+  socket.onmessage = (event) => { 
+  console.log("📨 WS RAW:", event.data);
+
+  const data = JSON.parse(event.data);
+
+  if (data.type === "room_joined") {
+    setMatchRoom(data.roomId);
+    setMatchSide(data.side);
+    setQueueOpen(false);
+  }
+};
     const data = JSON.parse(event.data);
 
     if (data.type === "room_joined") {
