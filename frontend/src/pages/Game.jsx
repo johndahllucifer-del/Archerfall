@@ -679,6 +679,9 @@ export default function Game() {
       .replace("http://", "ws://") + "/ws/matchmaking";
 
   const socket = new WebSocket(wsUrl);
+   socket.onopen = () => {
+  console.log("✅ WebSocket Connected");
+};              
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
