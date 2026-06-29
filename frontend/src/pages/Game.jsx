@@ -694,14 +694,6 @@ export default function Game() {
     setQueueOpen(false);
   }
 };
-    const data = JSON.parse(event.data);
-
-    if (data.type === "room_joined") {
-      setMatchRoom(data.roomId);
-      setMatchSide(data.side);
-      setQueueOpen(false);
-    }
-  };
 
   socket.onerror = () => {
     console.error("WebSocket connection failed");
