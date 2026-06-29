@@ -60,6 +60,14 @@
 - **Name prompt dialog** on first launch, name saved to localStorage `archery_player_name`
 - **Phoenix Bow** (Mythic, gated): 5-arrow flaming spread, ×2.5 score, ×1.5 arrow speed — only equippable while your name is in the top 3 of the global leaderboard.
 - All 12 testing-agent checks passed (100% backend + 100% frontend)
+
+### Iteration 4 (2026-02)
+- **Keyboard shortcuts**: Space = pause/resume, R = restart run, S = toggle shop, L = toggle leaderboard. Ignores key events when typing in inputs.
+- **Mobile / touch controls**: canvas now responds to touchstart/touchmove/touchend, mirroring mouse-down/move/up. `touch-action: none` on canvas to prevent scroll while aiming.
+- Verified end-to-end via screenshot: S/L/R/Space all working from menu and gameplay.
+
+### Deferred to Iteration 5
+- **Optional Emergent Google Auth** for cross-device name claiming. Needs `integration_playbook_expert_v2` for the Emergent Auth playbook, env wiring, and a profile/claim flow that ties the local `archery_player_name` to an authenticated identity server-side. Scoped out to keep this iteration focused.
 - All 10 testing-agent flows passed (100%)
 
 ## Personas

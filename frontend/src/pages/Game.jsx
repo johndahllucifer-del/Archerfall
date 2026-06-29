@@ -119,6 +119,37 @@ export default function Game() {
     refreshLeaderboard();
   }, [refreshLeaderboard]);
 
+  // Keyboard shortcuts: Space=pause, R=restart, S=shop, L=leaderboard, Esc closes dialogs
+  useEffect(() => {
+    const onKey = (e) => {
+      // Ignore typing into name input
+      if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+      const state = stateRef.current;
+      if (!state) return;
+      const k = e.key.toLowerCase();
+      if (e.code === "Space" || k === " ") {
+        if (state.status === "playing" || state.status === "paused") {
+          e.preventDefault();
+          pauseToggle();
+        }
+      } else if (k === "r") {
+        e.preventDefault();
+        startGame();
+      } else if (k === "s") {
+        e.preventDefault();
+        sounds.click();
+        setShopOpen((v) => !v);
+      } else if (k === "l") {
+        e.preventDefault();
+        sounds.click();
+        refreshLeaderboard();
+        setBoardOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [refreshLeaderboard]);
+
   // Submit score on game over
   useEffect(() => {
     const state = stateRef.current;
@@ -161,6 +192,32 @@ export default function Game() {
   };
 
   const onMouseUp = () => {
+    const state = stateRef.current;
+    if (!state) return;
+    releaseShot(state);
+  };
+
+  // Touch handlers (mobile)
+  const onTouchStart = (e) => {
+    e.preventDefault();
+    initAudio();
+    const state = stateRef.current;
+    if (!state || !e.touches[0]) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    state.mouse.x = ((e.touches[0].clientX - rect.left) * canvasRef.current.width) / rect.width;
+    state.mouse.y = ((e.touches[0].clientY - rect.top) * canvasRef.current.height) / rect.height;
+    startCharge(state);
+  };
+  const onTouchMove = (e) => {
+    e.preventDefault();
+    const state = stateRef.current;
+    if (!state || !e.touches[0]) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    state.mouse.x = ((e.touches[0].clientX - rect.left) * canvasRef.current.width) / rect.width;
+    state.mouse.y = ((e.touches[0].clientY - rect.top) * canvasRef.current.height) / rect.height;
+  };
+  const onTouchEnd = (e) => {
+    e.preventDefault();
     const state = stateRef.current;
     if (!state) return;
     releaseShot(state);
@@ -327,11 +384,15 @@ export default function Game() {
             ref={canvasRef}
             width={dimensions.width}
             height={dimensions.height}
-            className="game-canvas"
+            className="game-canvas touch-none"
             onMouseMove={onMouseMove}
             onMouseDown={onMouseDown}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseUp}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchEnd}
             data-testid="game-canvas"
           />
 
@@ -438,7 +499,11 @@ export default function Game() {
         {/* Footer hint */}
         <div className="mt-3 text-center text-xs text-slate-500">
           <span className="font-mono-game">L-Click hold</span> = charge & aim &nbsp;·&nbsp;
-          <span className="font-mono-game">release</span> = shoot &nbsp;·&nbsp; Shoot floating crates to grab power-ups
+          <span className="font-mono-game">release</span> = shoot &nbsp;·&nbsp;
+          <span className="font-mono-game">Space</span>=pause &nbsp;
+          <span className="font-mono-game">R</span>=restart &nbsp;
+          <span className="font-mono-game">S</span>=shop &nbsp;
+          <span className="font-mono-game">L</span>=board
         </div>
       </div>
 

@@ -12,6 +12,7 @@
   cursor: crosshair;
   display: block;
   image-rendering: -webkit-optimize-contrast;
+  touch-action: none;
 }
 
 /* Custom scrollbar hidden */
