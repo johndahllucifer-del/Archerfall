@@ -182,7 +182,7 @@ const [nextShotItem, setNextShotItem] = useState(null);
           }
           toast.success(`+${res.coins_credited} coins added!`, { id: "pay" });
           sounds.powerUp();
-}
+          
         } else if (purpose === "support") {
           toast.success("Thanks for the support 💛", { id: "pay" });
           sounds.levelUp();
