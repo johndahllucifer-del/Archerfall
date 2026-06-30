@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { SHOP_ITEMS, getShopItemById } from "@/data/shopItems";
 import { Heart, Volume2, VolumeX, Trophy, Zap, Clock, Bomb, Play, Pause, RotateCcw, Target as TargetIcon, ShoppingBag, Coins, Check, Lock, Medal, Flame, Swords, HeartHandshake } from "lucide-react";
 import {
   createInitialState,
