@@ -387,7 +387,6 @@ const [nextShotItem, setNextShotItem] = useState(null);
             setActiveItem("red_laser");
             toast.success("🔴 Red Laser ready!");
         }
-    }
 
     forceUpdate();
   };
