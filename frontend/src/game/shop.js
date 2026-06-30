@@ -131,7 +131,32 @@ export const ITEMS = {
     color: "from-violet-500 to-purple-700",
   },
 };
+bolt: {
+  id: "bolt",
+  name: "Bolt",
+  desc: "For 10 seconds, arrows chain between balloons.",
+  cost: 350,
+  icon: Zap,
+  color: "from-yellow-400 to-orange-500",
+},
 
+bomb_arrow: {
+  id: "bomb_arrow",
+  name: "Bomb Arrow",
+  desc: "Your next shot becomes an explosive arrow with a big BOOM.",
+  cost: 500,
+  icon: Bomb,
+  color: "from-orange-500 to-red-600",
+},
+
+red_laser: {
+  id: "red_laser",
+  name: "Red Laser",
+  desc: "Fires a wide red laser. Normal targets die instantly; bosses lose half HP.",
+  cost: 800,
+  icon: Flame,
+  color: "from-red-600 to-rose-700",
+},
 const COINS_KEY = "archery_coins_v1";
 const OWNED_BOWS_KEY = "archery_owned_bows_v1";
 const OWNED_ITEMS_KEY = "archery_owned_items_v1";
