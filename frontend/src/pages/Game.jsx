@@ -92,6 +92,9 @@ const [nextShotItem, setNextShotItem] = useState(null);
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
   }, []);
+  useEffect(() => {
+  localStorage.setItem("archerfall_inventory_v1", JSON.stringify(inventory));
+}, [inventory]);
 
   // Initialize state
   useEffect(() => {
@@ -218,6 +221,27 @@ const [nextShotItem, setNextShotItem] = useState(null);
       setPaying(false);
     }
   };
+  const buyShopItem = (itemId) => {
+  const item = getShopItemById(itemId);
+  if (!item) return;
+
+  const coins = stateRef.current?.coins ?? 0;
+
+  if (coins < item.price) {
+    toast.error("Not enough gold!");
+    return;
+  }
+
+  stateRef.current.coins = coins - item.price;
+
+  setInventory((prev) => ({
+    ...prev,
+    [itemId]: (prev[itemId] || 0) + 1,
+  }));
+
+  setTick((t) => t + 1);
+  toast.success(`${item.icon} ${item.name} purchased!`);
+};
 
   // Keyboard shortcuts: Space=pause, R=restart, S=shop, L=leaderboard, Esc closes dialogs
   useEffect(() => {
