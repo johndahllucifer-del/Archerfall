@@ -54,6 +54,8 @@ export const createInitialState = (width, height) => {
     shake: 0,
     // Tracks whether mega boss already spawned this level
     _megaBossSpawned: false,
+    // Tracks whether the Sky Carrier (lvl 20 boss) already spawned this level
+    _skyCarrierSpawned: false,
     // Persistent progress (mirrored to localStorage)
     coins: prog.coins,
     ownedBows: prog.ownedBows,
@@ -141,6 +143,7 @@ export const resetForNewGame = (state) => {
   state.lasers = [];
   state.pendingLaser = null;
   state._megaBossSpawned = false;
+  state._skyCarrierSpawned = false;
   state.status = "playing";
   state.theme = getThemeForLevel(1);
   state.lastSpawnTime = performance.now();
@@ -511,6 +514,7 @@ const checkLevelUp = (state) => {
     state.scoreAtLevelStart = state.score;
     state.theme = getThemeForLevel(state.level);
     state._megaBossSpawned = false;
+    state._skyCarrierSpawned = false;
     state.status = "levelComplete";
     sounds.levelUp();
   }
