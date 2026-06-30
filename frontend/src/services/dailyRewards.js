@@ -100,3 +100,5 @@ export function formatRemainingTime(ms) {
 
   return `${hours}h ${minutes}m ${seconds}s`;
 }
+free: { coins: 30, items: [{ id: "bolt", amount: 1 }] }
+pro: { coins: 120, items: [{ id: "bomb", amount: 1 }] }
