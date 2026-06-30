@@ -220,23 +220,6 @@ const [nextShotItem, setNextShotItem] = useState(null);
       setPaying(false);
     }
   };
-
-  if (itemId === "bolt") {
-    setBoltUntil(Date.now() + 10000);
-    toast.success("⚡ Bolt activated for 10 seconds!");
-  }
-
-  if (itemId === "bomb_arrow") {
-    setNextShotItem("bomb_arrow");
-    toast.success("💣 Your next arrow is a Bomb Arrow!");
-  }
-
-  if (itemId === "red_laser") {
-    setActiveItem("red_laser");
-    toast.success("🔴 Red Laser ready!");
-  }
-};  
-
   // Keyboard shortcuts: Space=pause, R=restart, S=shop, L=leaderboard, Esc closes dialogs
   useEffect(() => {
     const onKey = (e) => {
