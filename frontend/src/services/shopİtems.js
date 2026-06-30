@@ -12,27 +12,26 @@ export const SHOP_ITEMS = [
     durationSeconds: 10,
     description:
       "For 10 seconds, your arrows chain between balloons and hit multiple targets.",
-    type: "consumable",
     usable: true,
-     consumable: true
+    consumable: true
   },
   {
-    {
-  id: "health_potion",
-  name: "Health Potion",
-  icon: "🧪",
-  price: 150,
-  currency: "gold",
-  rarity: "Common",
-  category: "Consumables",
-  type: "consumable",
-  effectType: "heal",
-  healAmount: 1,
-  description:
-    "Restores 1 extra health point.",
-  usable: true,
-  consumable: true
-},
+    id: "health_potion",
+    name: "Health Potion",
+    icon: "🧪",
+    price: 150,
+    currency: "gold",
+    rarity: "Common",
+    category: "Consumables",
+    type: "consumable",
+    effectType: "heal",
+    healAmount: 1,
+    description:
+      "Restores 1 extra health point.",
+    usable: true,
+    consumable: true
+  },
+  {
     id: "bomb_arrow",
     name: "Bomb Arrow",
     icon: "💣",
@@ -44,7 +43,6 @@ export const SHOP_ITEMS = [
     effectType: "next_shot",
     description:
       "Your next arrow becomes an explosive bomb arrow. It sticks to a balloon and explodes in a large area with a BOOM effect.",
-    type: "consumable",
     usable: true,
     consumable: true
   },
@@ -60,7 +58,6 @@ export const SHOP_ITEMS = [
     effectType: "instant_attack",
     description:
       "Fires a wide red laser beam. Normal targets are destroyed instantly. Level 10 bosses lose half of their health.",
-    type: "consumable",
     usable: true,
     consumable: true
   },
@@ -76,4 +73,3 @@ export function getShopItemsByCategory(category) {
 
 export function getShopItemsByRarity(rarity) {
   return SHOP_ITEMS.filter((item) => item.rarity === rarity);
-}
