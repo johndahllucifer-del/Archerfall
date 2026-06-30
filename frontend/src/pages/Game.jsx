@@ -196,7 +196,6 @@ if (itemId === "red_laser") {
   setActiveItem("red_laser");
   toast.success("🔴 Red Laser ready!");
 }
-};
         } else if (purpose === "support") {
           toast.success("Thanks for the support 💛", { id: "pay" });
           sounds.levelUp();
