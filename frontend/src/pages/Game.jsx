@@ -370,7 +370,25 @@ const [nextShotItem, setNextShotItem] = useState(null);
   const handleBuyItem = (id) => {
     const state = stateRef.current;
     if (!state) return;
+    
     if (buyItem(state, id)) sounds.powerUp();
+    forceUpdate();
+    if (id === "bolt") {
+            setBoltUntil(Date.now() + 10000);
+            toast.success("⚡ Bolt activated for 10 seconds!");
+        }
+
+     if (id === "bomb_arrow") {
+            setNextShotItem("bomb_arrow");
+            toast.success("💣 Bomb Arrow ready!");
+        }
+
+     if (id === "red_laser") {
+            setActiveItem("red_laser");
+            toast.success("🔴 Red Laser ready!");
+        }
+    }
+
     forceUpdate();
   };
 
