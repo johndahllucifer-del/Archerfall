@@ -89,6 +89,13 @@
 - **Shop**: consumables in Items tab show count badge (`x2`), have both `Use` and `Buy` buttons, are purchasable multiple times, never get an "Owned" badge.
 - **Inventory hotbar**: persistent strip above canvas with `Bolt`, `Bomb`, `Laser` quick-use buttons (disabled when count=0 or not playing).
 - Did NOT touch: leaderboard, multiplayer placeholder, payment endpoints, bow shop, existing items (quickDraw, eagleEye, luckyCharm, extraLife, magnet) — all preserved.
+
+### Iteration 8 (2026-02)
+- **Red Laser charging** — clicking Use now schedules a fire 3 seconds later via `beginLaserCharge(state, 3000)`. Auto-fires when timer expires inside `updatePhysics`. Player can re-aim during charge.
+- **Laser charge sound** — new `sounds.laserCharge()` — rising 8-tone sawtooth whine + low sub for ~3 seconds.
+- **Laser beam 8× larger** — outer glow `38→304`, mid `14→112`, core `4→32`, corridor half-width `28→224`.
+- **Charge visual** — pulsing red aura + circular progress ring around the bow + `X.Xs` countdown text during the 3s windup.
+- **Storm Giant boss** (new) — spawns at level 15+ with 6% chance. HP `25 + 2×level`, 1500 pts, 5-shot wide fan attack + lightning flash visual. Costs 4 lives if it escapes (vs 3 for mega boss). Rendered as a fluffy purple thundercloud with glowing eyes, internal lightning bolts, and a bigger purple→amber HP bar.
 - All 10 testing-agent flows passed (100%)
 
 ## Personas

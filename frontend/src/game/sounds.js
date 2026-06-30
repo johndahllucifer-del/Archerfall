@@ -99,6 +99,15 @@ export const sounds = {
     playTone({ freq: 80, freqEnd: 40, type: "sawtooth", duration: 0.3, volume: 0.14 });
   },
   click: () => playTone({ freq: 600, type: "square", duration: 0.04, volume: 0.06 }),
+  laserCharge: () => {
+    // Rising 3-tone whine over ~3 seconds with metallic timbre
+    [220, 330, 440, 580, 720, 900, 1100, 1400].forEach((f, i) =>
+      playTone({ freq: f, type: "sawtooth", duration: 0.42, volume: 0.06, delay: i * 0.36 })
+    );
+    [110, 165].forEach((f, i) =>
+      playTone({ freq: f, type: "sine", duration: 2.6, volume: 0.04, delay: i * 0.05 })
+    );
+  },
 };
 
 export const initAudio = () => ensureCtx();

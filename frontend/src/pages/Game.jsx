@@ -19,7 +19,7 @@ import {
   buyItem,
   activateBoltConsumable,
   activateBombArrowConsumable,
-  fireLaser,
+  beginLaserCharge,
 } from "@/game/engine";
 import { drawScene } from "@/game/render";
 import { initAudio, setSoundEnabled, sounds } from "@/game/sounds";
@@ -260,8 +260,12 @@ const [nextShotItem, setNextShotItem] = useState(null);
       activateBombArrowConsumable(st);
       toast.success("💣 Next arrow is a Bomb Arrow");
     } else if (itemId === "red_laser") {
-      fireLaser(st);
-      toast.success("🔴 Red Laser fired!");
+      const started = beginLaserCharge(st, 3000);
+      if (!started) {
+        toast.error("Laser already charging");
+        return;
+      }
+      toast.success("🔴 Charging Red Laser… firing in 3s");
     } else {
       return;
     }

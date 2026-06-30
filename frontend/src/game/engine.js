@@ -139,6 +139,7 @@ export const resetForNewGame = (state) => {
   state.chainUntil = 0;
   state.nextShotExplosive = false;
   state.lasers = [];
+  state.pendingLaser = null;
   state._megaBossSpawned = false;
   state.status = "playing";
   state.theme = getThemeForLevel(1);
@@ -234,28 +235,34 @@ export const fireLaser = (state) => {
   const y2 = state.bow.y + Math.sin(angle) * len;
   state.lasers = state.lasers || [];
   state.lasers.push({ x1: state.bow.x, y1: state.bow.y, x2, y2, life: 1 });
-  state.shake = Math.max(state.shake || 0, 14);
+  state.shake = Math.max(state.shake || 0, 22);
   sounds.explosion();
-  // Damage anything within a wide corridor along the beam
-  const beamHalfWidth = 28;
+  // Damage anything within a wide corridor along the beam (8x wider than before)
+  const beamHalfWidth = 224;
   const dirX = Math.cos(angle), dirY = Math.sin(angle);
   for (const t of state.targets) {
     if (!t.alive) continue;
-    // Vector from bow to target
     const vx = t.x - state.bow.x, vy = t.y - state.bow.y;
-    const proj = vx * dirX + vy * dirY; // along beam
+    const proj = vx * dirX + vy * dirY;
     if (proj < 0 || proj > len) continue;
-    const perp = Math.abs(vx * -dirY + vy * dirX); // perpendicular distance
+    const perp = Math.abs(vx * -dirY + vy * dirX);
     if (perp > beamHalfWidth + t.r) continue;
-    if (t.type === "boss" || t.type === "megaBoss") {
-      // Halve HP (bosses don't die instantly)
+    if (t.type === "boss" || t.type === "megaBoss" || t.type === "stormGiant") {
       const half = Math.ceil(t.hp / 2);
       damageTarget(state, t, half);
     } else {
-      // Instant kill normal targets
       damageTarget(state, t, t.hp);
     }
   }
+};
+
+// Schedule a Red Laser shot 3s after clicking Use (with charging sound + visual ring)
+export const beginLaserCharge = (state, chargeMs = 3000) => {
+  if (state.status !== "playing") return false;
+  if (state.pendingLaser) return false; // already charging
+  state.pendingLaser = { fireAt: performance.now() + chargeMs, startedAt: performance.now(), durationMs: chargeMs };
+  sounds.laserCharge && sounds.laserCharge();
+  return true;
 };
 
 const spawnTarget = (state) => {
@@ -267,11 +274,12 @@ const spawnTarget = (state) => {
   if (lvl % 10 === 0 && !state._megaBossSpawned) {
     type = "megaBoss";
     state._megaBossSpawned = true;
-  } else if (lvl >= 5 && roll < 0.08) type = "zeppelin";
-  else if (lvl >= 4 && roll < 0.16) type = "giantBalloon";
-  else if (lvl >= 5 && roll < 0.24) type = "boss";
-  else if (lvl >= 3 && roll < 0.36) type = "flyer";
-  else if (roll < 0.6) type = "bullseye";
+  } else if (lvl >= 15 && roll < 0.06) type = "stormGiant";
+  else if (lvl >= 5 && roll < 0.12) type = "zeppelin";
+  else if (lvl >= 4 && roll < 0.20) type = "giantBalloon";
+  else if (lvl >= 5 && roll < 0.28) type = "boss";
+  else if (lvl >= 3 && roll < 0.40) type = "flyer";
+  else if (roll < 0.62) type = "bullseye";
   else type = "balloon";
 
   const baseSpeed = 1.3 + lvl * 0.22 + Math.random() * 0.7;
@@ -341,6 +349,19 @@ const spawnTarget = (state) => {
     });
     spawnFloatText(state, state.width / 2, 80, `⚠ MEGA BOSS LV.${lvl}`, "#ef4444");
     state.shake = 12;
+  } else if (type === "stormGiant") {
+    const hp = 25 + lvl * 2;
+    state.targets.push({
+      type, x: state.width + 140, y: Math.max(200, state.height / 2 - 30),
+      r: 110, vx: -baseSpeed * 0.4,
+      vy: 0,
+      bob: { amp: 40, freq: 0.0014, t: Math.random() * 1000 },
+      hp, maxHp: hp, points: 1500, alive: true,
+      attackTimer: 900, isStorm: true,
+      lightning: 0,
+    });
+    spawnFloatText(state, state.width / 2, 80, `⛈ STORM GIANT`, "#7c3aed");
+    state.shake = 16;
   }
 };
 
@@ -621,14 +642,36 @@ export const updatePhysics = (state, dt) => {
         }
         t.attackTimer = 1100 + Math.random() * 700;
       }
+    } else if (t.type === "stormGiant") {
+      t.bob.t += dt * slow;
+      t.y += Math.sin(t.bob.t * t.bob.freq) * 0.9;
+      // Stops in right portion to bombard player
+      if (t.x < state.width - 220) t.vx = 0;
+      t.attackTimer -= dt * slow;
+      t.lightning = Math.max(0, (t.lightning || 0) - dt);
+      if (t.attackTimer <= 0 && t.x < state.width - 30) {
+        // Rapid 5-shot wide fan + 1 homing-ish straight shot
+        const baseAngle = Math.atan2(state.bow.y - t.y, state.bow.x - t.x);
+        for (const offset of [-0.32, -0.16, 0, 0.16, 0.32]) {
+          const a = baseAngle + offset;
+          state.enemyProjectiles.push({
+            x: t.x - t.r, y: t.y,
+            vx: Math.cos(a) * 6.2,
+            vy: Math.sin(a) * 6.2,
+            r: 11, t: 0, alive: true, hp: 1, storm: true,
+          });
+        }
+        t.lightning = 380; // flash visual
+        t.attackTimer = 900 + Math.random() * 500;
+      }
     }
     // Missed target - reached the bow side
     if (t.x < -40) {
       t.alive = false;
-      // Bosses, flyers, zeppelins & megaBoss cost a life if they escape
-      const costly = ["boss", "flyer", "zeppelin", "megaBoss"];
+      // Bosses, flyers, zeppelins, megaBoss & stormGiant cost a life if they escape
+      const costly = ["boss", "flyer", "zeppelin", "megaBoss", "stormGiant"];
       if (costly.includes(t.type)) {
-        const cost = t.type === "megaBoss" ? 3 : 1;
+        const cost = t.type === "megaBoss" ? 3 : t.type === "stormGiant" ? 4 : 1;
         state.lives -= cost;
         sounds.miss();
         spawnFloatText(state, 60, state.height - 40, `-${cost} LIFE`, "#ef4444");
@@ -737,6 +780,12 @@ export const updatePhysics = (state, dt) => {
   // Laser beams (fade quickly, render-only after damage applied at fire time)
   for (const ls of state.lasers || []) ls.life -= 0.06;
   state.lasers = (state.lasers || []).filter((l) => l.life > 0);
+
+  // Pending laser charge — auto-fire when ready
+  if (state.pendingLaser && performance.now() >= state.pendingLaser.fireAt) {
+    state.pendingLaser = null;
+    fireLaser(state);
+  }
 
   // Screen shake decay
   if (state.shake > 0) state.shake = Math.max(0, state.shake - 0.6);

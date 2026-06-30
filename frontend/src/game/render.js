@@ -522,6 +522,67 @@ const drawTarget = (ctx, t, time) => {
     ctx.font = "bold 12px 'JetBrains Mono', monospace";
     ctx.textAlign = "center";
     ctx.fillText("MEGA BOSS", t.x, t.y - t.r - 38);
+  } else if (t.type === "stormGiant") {
+    // Massive thunder cloud giant
+    const pulse = 1 + Math.sin(time * 0.004) * 0.05;
+    const lightningFlash = (t.lightning || 0) > 200 ? 1 : 0;
+    // Outer storm aura
+    const ag = ctx.createRadialGradient(t.x, t.y, t.r * 0.5, t.x, t.y, t.r * 1.7);
+    ag.addColorStop(0, "rgba(124,58,237,0.55)");
+    ag.addColorStop(0.6, "rgba(76,29,149,0.3)");
+    ag.addColorStop(1, "rgba(76,29,149,0)");
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.arc(t.x, t.y, t.r * 1.7, 0, Math.PI * 2); ctx.fill();
+    // Cloud body (multiple overlapping spheres for fluffy look)
+    ctx.fillStyle = lightningFlash ? "#e9d5ff" : "#4c1d95";
+    const blobs = [
+      [0, 0, t.r * pulse],
+      [-t.r * 0.6, -t.r * 0.3, t.r * 0.75 * pulse],
+      [t.r * 0.6, -t.r * 0.3, t.r * 0.75 * pulse],
+      [-t.r * 0.4, t.r * 0.4, t.r * 0.6 * pulse],
+      [t.r * 0.4, t.r * 0.4, t.r * 0.6 * pulse],
+    ];
+    for (const [bx, by, br] of blobs) {
+      ctx.beginPath();
+      ctx.arc(t.x + bx, t.y + by, br, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Lightning bolts inside the cloud
+    if (lightningFlash) {
+      ctx.strokeStyle = "#fde047";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(t.x - 20, t.y - 10);
+      ctx.lineTo(t.x - 5, t.y + 5);
+      ctx.lineTo(t.x - 18, t.y + 10);
+      ctx.lineTo(t.x + 10, t.y + 35);
+      ctx.stroke();
+    }
+    // Glowing eyes
+    ctx.fillStyle = "#fde047";
+    const blink = (Math.sin(time * 0.005) + 1) * 0.5;
+    ctx.beginPath(); ctx.arc(t.x - 28, t.y - 6, 9 + blink * 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(t.x + 28, t.y - 6, 9 + blink * 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#7c2d12";
+    ctx.beginPath(); ctx.arc(t.x - 28, t.y - 6, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(t.x + 28, t.y - 6, 3, 0, Math.PI * 2); ctx.fill();
+    // Big HP bar
+    const bw = 240, bh = 11;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(t.x - bw / 2, t.y - t.r - 36, bw, bh);
+    const hpFrac = t.hp / t.maxHp;
+    const hpGrad = ctx.createLinearGradient(t.x - bw / 2, 0, t.x + bw / 2, 0);
+    hpGrad.addColorStop(0, "#a855f7");
+    hpGrad.addColorStop(1, "#fbbf24");
+    ctx.fillStyle = hpGrad;
+    ctx.fillRect(t.x - bw / 2, t.y - t.r - 36, bw * hpFrac, bh);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(t.x - bw / 2, t.y - t.r - 36, bw, bh);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 12px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("STORM GIANT", t.x, t.y - t.r - 42);
   } else if (t.type === "boss") {
     // Boss balloon
     ctx.fillStyle = "#7c3aed";
@@ -656,13 +717,43 @@ export const drawScene = (ctx, state, time) => {
     ctx.restore();
   }
   drawParticles(ctx, state);
-  // Laser beams (drawn above particles, below bow)
+  // Laser charging ring around the bow during 3s windup
+  if (state.pendingLaser) {
+    const now = performance.now();
+    const total = state.pendingLaser.durationMs || 3000;
+    const remaining = Math.max(0, state.pendingLaser.fireAt - now);
+    const progress = 1 - remaining / total;
+    ctx.save();
+    // Outer pulsing aura
+    const pulse = (Math.sin(now * 0.02) + 1) * 0.5;
+    const auraR = 50 + pulse * 16;
+    const ag = ctx.createRadialGradient(state.bow.x, state.bow.y, 10, state.bow.x, state.bow.y, auraR);
+    ag.addColorStop(0, "rgba(239,68,68,0.7)");
+    ag.addColorStop(1, "rgba(239,68,68,0)");
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.arc(state.bow.x, state.bow.y, auraR, 0, Math.PI * 2); ctx.fill();
+    // Progress ring
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath(); ctx.arc(state.bow.x, state.bow.y, 46, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = "#ef4444";
+    ctx.beginPath();
+    ctx.arc(state.bow.x, state.bow.y, 46, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.stroke();
+    // Countdown text
+    ctx.fillStyle = "#7f1d1d";
+    ctx.font = "bold 16px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`${(remaining / 1000).toFixed(1)}s`, state.bow.x, state.bow.y - 60);
+    ctx.restore();
+  }
+  // Laser beams (drawn above particles, below bow) — 8x larger than before
   for (const ls of state.lasers || []) {
     const alpha = Math.max(0, ls.life);
     ctx.save();
     // Outer glow
     ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.35})`;
-    ctx.lineWidth = 38;
+    ctx.lineWidth = 304;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(ls.x1, ls.y1);
@@ -670,14 +761,14 @@ export const drawScene = (ctx, state, time) => {
     ctx.stroke();
     // Mid beam
     ctx.strokeStyle = `rgba(248, 113, 113, ${alpha * 0.9})`;
-    ctx.lineWidth = 14;
+    ctx.lineWidth = 112;
     ctx.beginPath();
     ctx.moveTo(ls.x1, ls.y1);
     ctx.lineTo(ls.x2, ls.y2);
     ctx.stroke();
     // Hot core
     ctx.strokeStyle = `rgba(255, 240, 230, ${alpha})`;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 32;
     ctx.beginPath();
     ctx.moveTo(ls.x1, ls.y1);
     ctx.lineTo(ls.x2, ls.y2);
