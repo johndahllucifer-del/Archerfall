@@ -1,5 +1,5 @@
 // Shop catalog + persistence helpers.
-import { Crown, Gem, Sparkles, Zap, Eye, Heart, Clover, Bomb, Flame, Magnet,Bolt, Bomb Arrow, Red Laser, Bomb,Target } from "lucide-react";
+import { Crown, Gem, Sparkles, Zap, Eye, Heart, Clover, Bomb, Flame, Magnet, Bomb , Bolt, Bomb_arrow,Red_laser } from "lucide-react";
 
 export const BOWS = {
   wooden: {
