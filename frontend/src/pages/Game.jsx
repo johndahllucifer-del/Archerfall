@@ -56,6 +56,19 @@ export default function Game() {
   const [queueSeconds, setQueueSeconds] = useState(0);
   const [matchRoom, setMatchRoom] = useState(null);
   const [matchSide, setMatchSide] = useState(null);
+  const [inventory, setInventory] = useState(() => {
+  const saved = localStorage.getItem("archerfall_inventory_v1");
+  return saved ? JSON.parse(saved) : {
+    bolt: 0,
+    bomb_arrow: 0,
+    red_laser: 0,
+  };
+});
+
+const [activeItem, setActiveItem] = useState(null);
+const [boltUntil, setBoltUntil] = useState(0);
+const [nextShotItem, setNextShotItem] = useState(null);
+  
   // Queue timer
   useEffect(() => {
   if (!queueOpen) {
