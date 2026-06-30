@@ -17,6 +17,9 @@ import {
   buyBow,
   equipBow,
   buyItem,
+  activateBoltConsumable,
+  activateBombArrowConsumable,
+  fireLaser,
 } from "@/game/engine";
 import { drawScene } from "@/game/render";
 import { initAudio, setSoundEnabled, sounds } from "@/game/sounds";
@@ -47,8 +50,40 @@ export default function Game() {
   const [playerName, setName] = useState(() => getPlayerName());
   const [nameDraft, setNameDraft] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [coinShopOpen, setCoinShopOpen] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [customTip, setCustomTip] = useState("");
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [queueSeconds, setQueueSeconds] = useState(0);
+  const [matchRoom, setMatchRoom] = useState(null);
+  const [matchSide, setMatchSide] = useState(null);
+  const [inventory, setInventory] = useState(() => {
+  const saved = localStorage.getItem("archerfall_inventory_v1");
+  return saved ? JSON.parse(saved) : {
+    bolt: 0,
+    bomb_arrow: 0,
+    red_laser: 0,
+  };
+});
 
-  // Setup canvas size to viewport
+const [activeItem, setActiveItem] = useState(null);
+const [boltUntil, setBoltUntil] = useState(0);
+const [nextShotItem, setNextShotItem] = useState(null);
+  
+  // Queue timer
+  useEffect(() => {
+  if (!queueOpen) {
+    setQueueSeconds(0);
+    return;
+  }
+
+  const timer = setInterval(() => {
+    setQueueSeconds((prev) => prev + 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [queueOpen]);
   useEffect(() => {
     const compute = () => {
       const w = Math.min(1400, window.innerWidth - 32);
@@ -59,6 +94,9 @@ export default function Game() {
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
   }, []);
+  useEffect(() => {
+  localStorage.setItem("archerfall_inventory_v1", JSON.stringify(inventory));
+}, [inventory]);
 
   // Initialize state
   useEffect(() => {
@@ -184,6 +222,51 @@ export default function Game() {
       toast.error("Couldn't start support checkout");
       setPaying(false);
     }
+  };
+
+  // Buy a consumable from the shop: pay coins, +1 inventory
+  const handleBuyConsumable = (itemId) => {
+    const item = ITEMS[itemId];
+    const st = stateRef.current;
+    if (!item || !st) return;
+    if (st.coins < item.cost) {
+      toast.error("Not enough coins");
+      return;
+    }
+    st.coins -= item.cost;
+    try { localStorage.setItem("archery_coins_v1", String(st.coins)); } catch (e) { /* ignore */ }
+    setInventory((inv) => ({ ...inv, [itemId]: (inv[itemId] || 0) + 1 }));
+    sounds.powerUp();
+    toast.success(`Purchased ${item.name}`);
+    forceUpdate();
+  };
+
+  // Use one consumable from inventory
+  const consumeItem = (itemId) => {
+    const inv = inventory;
+    if (!inv || (inv[itemId] || 0) <= 0) {
+      toast.error("None left in inventory");
+      return;
+    }
+    const st = stateRef.current;
+    if (!st || st.status !== "playing") {
+      toast.error("Start a game first");
+      return;
+    }
+    if (itemId === "bolt") {
+      activateBoltConsumable(st, 10000);
+      toast.success("⚡ Bolt active — arrows chain for 10s");
+    } else if (itemId === "bomb_arrow") {
+      activateBombArrowConsumable(st);
+      toast.success("💣 Next arrow is a Bomb Arrow");
+    } else if (itemId === "red_laser") {
+      fireLaser(st);
+      toast.success("🔴 Red Laser fired!");
+    } else {
+      return;
+    }
+    setInventory((cur) => ({ ...cur, [itemId]: Math.max(0, (cur[itemId] || 0) - 1) }));
+    sounds.click();
   };
 
   // Keyboard shortcuts: Space=pause, R=restart, S=shop, L=leaderboard, Esc closes dialogs
@@ -463,6 +546,33 @@ export default function Game() {
           </div>
         </div>
 
+        {/* Consumables hotbar */}
+        <div className="flex items-center gap-2 mb-2" data-testid="inventory-bar">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mr-1">Inventory</span>
+          {[
+            { id: "bolt", label: "Bolt", emoji: "⚡" },
+            { id: "bomb_arrow", label: "Bomb", emoji: "💣" },
+            { id: "red_laser", label: "Laser", emoji: "🔴" },
+          ].map((it) => {
+            const count = inventory[it.id] || 0;
+            return (
+              <Button
+                key={it.id}
+                size="sm"
+                variant="outline"
+                disabled={count <= 0 || !state || state.status !== "playing"}
+                onClick={() => consumeItem(it.id)}
+                className="bg-white/80 btn-press"
+                data-testid={`hotbar-${it.id}`}
+              >
+                <span className="mr-1.5">{it.emoji}</span>
+                <span>{it.label}</span>
+                <span className="ml-2 font-mono-game text-xs text-slate-500">x{count}</span>
+              </Button>
+            );
+          })}
+        </div>
+
         {/* Canvas wrapper */}
         <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white" style={{ width: dimensions.width, maxWidth: "100%" }}>
           <canvas
@@ -480,6 +590,13 @@ export default function Game() {
             onTouchCancel={onTouchEnd}
             data-testid="game-canvas"
           />
+          {matchRoom && (
+  <div className="fixed top-4 left-4 z-50 bg-black/80 text-white p-4 rounded-xl border border-green-400">
+    <div className="font-bold text-green-300">ROOM JOINED</div>
+    <div>Room: {matchRoom}</div>
+    <div>Side: {matchSide}</div>
+  </div>
+)}
 
           {/* Menu overlay */}
           {status === "menu" && (
@@ -608,6 +725,9 @@ export default function Game() {
         onBuyBow={handleBuyBow}
         onEquipBow={handleEquipBow}
         onBuyItem={handleBuyItem}
+        inventory={inventory}
+        onBuyConsumable={handleBuyConsumable}
+        onUseConsumable={consumeItem}
       />
       <LeaderboardDialog
         open={boardOpen}
@@ -642,11 +762,114 @@ export default function Game() {
             <li>· If an opponent&apos;s arrow hits your bow first → <span className="font-bold text-orange-300">tanked</span>, no damage</li>
             <li>· Separate ranked leaderboard (ELO-style) for PvP</li>
           </ul>
-          <Button className="mt-2 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => setMpOpen(false)} data-testid="multiplayer-close">
-            Got it
+          <Button className="mt-2 bg-orange-500 hover:bg-orange-600 text-white"
+               onClick={() => {
+  setMpOpen(false);
+  setQueueOpen(true);
+
+  const wsUrl =
+    process.env.REACT_APP_BACKEND_URL
+      .replace("https://", "wss://")
+      .replace("http://", "ws://") + "/ws/matchmaking";
+
+  const socket = new WebSocket(wsUrl);
+   socket.onopen = () => {
+  console.log("✅ WebSocket Connected");
+};              
+
+  socket.onmessage = (event) => { 
+  console.log("📨 WS RAW:", event.data);
+
+  const data = JSON.parse(event.data);
+
+  if (data.type === "room_joined") {
+    setMatchRoom(data.roomId);
+    setMatchSide(data.side);
+    setQueueOpen(false);
+  }
+};
+
+  socket.onerror = () => {
+    console.error("WebSocket connection failed");
+  };
+ }}
+                 
+     data-testid="multiplayer-find-match"
+            >
+            Find Match
           </Button>
         </DialogContent>
       </Dialog>
+      <Dialog open={queueOpen} onOpenChange={setQueueOpen}>
+  <DialogContent className="max-w-lg bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-950 text-white border-0 shadow-2xl">
+    <DialogHeader>
+      <DialogTitle className="text-3xl font-extrabold text-center">
+        🏰 Castle Siege
+      </DialogTitle>
+      <DialogDescription className="text-slate-300 text-center">
+        Real-time 1v1 matchmaking queue
+      </DialogDescription>
+    </DialogHeader>
+
+    <div className="py-5 space-y-5 text-center">
+      <div className="mx-auto h-24 w-24 rounded-full bg-orange-500/20 border border-orange-300/40 flex items-center justify-center text-5xl animate-pulse">
+        ⚔️
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Players Online</div>
+          <div className="text-2xl font-bold text-emerald-300">247</div>
+        </div>
+
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Region</div>
+          <div className="text-2xl font-bold text-cyan-300">Europe</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-white/10 p-4">
+        <div className="text-slate-300 text-sm">Status</div>
+        <div className="text-xl font-bold text-orange-300">
+          Searching for opponent...
+        </div>
+      </div>
+
+      <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-orange-400 to-pink-500 rounded-full transition-all"
+          style={{ width: `${Math.min(90, 25 + queueSeconds * 4)}%` }}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Elapsed Time</div>
+          <div className="font-bold text-orange-300">{queueSeconds}s</div>
+        </div>
+
+        <div className="rounded-xl bg-white/10 p-3">
+          <div className="text-slate-300">Estimated Wait</div>
+          <div className="font-bold text-pink-300">&lt; 20s</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-black/20 border border-white/10 p-3">
+        <div className="text-xs text-slate-400 mb-1">TIP OF THE MATCH</div>
+        <div className="text-sm text-slate-200">
+          If an enemy arrow hits your bow first, it gets tanked and deals no damage.
+        </div>
+      </div>
+
+      <Button
+        className="w-full bg-red-500 hover:bg-red-600 text-white"
+        onClick={() => setQueueOpen(false)}
+      >
+        Cancel Queue
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
       <Dialog open={coinShopOpen} onOpenChange={setCoinShopOpen}>
         <DialogContent className="max-w-3xl bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border-0 shadow-2xl" data-testid="coinshop-dialog">
           <DialogHeader>
@@ -790,7 +1013,7 @@ const LegendChip = ({ color, label }) => (
   </div>
 );
 
-const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem }) => {
+const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem, inventory = {}, onBuyConsumable, onUseConsumable }) => {
   if (!state) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -876,7 +1099,9 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
           </TabsContent>
           <TabsContent value="items" className="mt-4 grid sm:grid-cols-2 gap-3 max-h-[55vh] overflow-y-auto pr-1">
             {Object.values(ITEMS).map((item) => {
-              const owned = state.ownedItems.includes(item.id);
+              const isConsumable = !!item.consumable;
+              const ownedCount = isConsumable ? (inventory[item.id] || 0) : (state.ownedItems.includes(item.id) ? 1 : 0);
+              const owned = !isConsumable && state.ownedItems.includes(item.id);
               const canAfford = state.coins >= item.cost;
               const Icon = item.icon;
               return (
@@ -886,29 +1111,49 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
                       <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
                     </div>
                     <div className="flex-1">
-                      <div className="font-bold text-slate-800">{item.name}</div>
+                      <div className="font-bold text-slate-800 flex items-center gap-2">
+                        {item.name}
+                        {isConsumable && ownedCount > 0 && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700" data-testid={`shop-item-${item.id}-count`}>
+                            x{ownedCount}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-500 mt-0.5">{item.desc}</div>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
+                  <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1 text-sm font-mono-game font-bold text-amber-700">
                       <Coins className="w-3.5 h-3.5" /> {item.cost}
                     </span>
-                    {owned ? (
-                      <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white" data-testid={`shop-item-${item.id}-owned`}>
-                        <Check className="w-3 h-3 mr-1" /> Owned
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        disabled={!canAfford}
-                        onClick={() => onBuyItem(item.id)}
-                        className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:opacity-90 disabled:opacity-40"
-                        data-testid={`shop-item-${item.id}-buy`}
-                      >
-                        {canAfford ? "Buy" : <><Lock className="w-3 h-3 mr-1" /> Need {item.cost - state.coins}</>}
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isConsumable && ownedCount > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onUseConsumable(item.id)}
+                          className="border-violet-400 text-violet-700 hover:bg-violet-50"
+                          data-testid={`shop-item-${item.id}-use`}
+                        >
+                          Use
+                        </Button>
+                      )}
+                      {owned ? (
+                        <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white" data-testid={`shop-item-${item.id}-owned`}>
+                          <Check className="w-3 h-3 mr-1" /> Owned
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          disabled={!canAfford}
+                          onClick={() => (isConsumable ? onBuyConsumable(item.id) : onBuyItem(item.id))}
+                          className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:opacity-90 disabled:opacity-40"
+                          data-testid={`shop-item-${item.id}-buy`}
+                        >
+                          {canAfford ? "Buy" : <><Lock className="w-3 h-3 mr-1" /> Need {item.cost - state.coins}</>}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </Card>
               );

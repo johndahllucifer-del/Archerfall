@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,13 +9,6 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone
-from emergentintegrations.payments.stripe.checkout import (
-    StripeCheckout,
-    CheckoutSessionResponse,
-    CheckoutStatusResponse,
-    CheckoutSessionRequest,
-)
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -316,38 +309,73 @@ async def coins_consume(payload: dict):
     new_val = max(0, int(doc.get("coins", 0)) - amount)
     await db.player_coins.update_one({"name_lc": name.lower()}, {"$set": {"coins": new_val}})
     return {"ok": True, "remaining": new_val}
-
-
-@api_router.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    body = await request.body()
-    sig = request.headers.get("Stripe-Signature")
-    stripe_checkout = _stripe_client(request)
-    event = await stripe_checkout.handle_webhook(body, sig)
-    if event.payment_status == "paid":
-        txn = await db.payment_transactions.find_one({"session_id": event.session_id})
-        if txn and txn.get("payment_status") != "paid":
-            update = {
-                "payment_status": "paid",
-                "status": "completed",
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-            if txn.get("purpose") == "coins":
-                coins = int(txn.get("coins", 0))
-                name = txn.get("player_name")
-                if name and coins > 0:
-                    await db.player_coins.update_one(
-                        {"name_lc": name.lower()},
-                        {"$inc": {"coins": coins}, "$set": {"name": name}},
-                        upsert=True,
-                    )
-                    update["coins_credited"] = coins
-            await db.payment_transactions.update_one(
-                {"session_id": event.session_id}, {"$set": update}
-            )
-    return {"received": True}
-
+    WebSocket, WebSocketDisconnect
 # Include the router in the main app
+waiting_players = []
+active_rooms = {}
+@app.get("/ws-health")
+async def ws_health():
+    return {
+        "ok": True,
+        "websocket": "ready",
+        "waiting_players": len(waiting_players),
+        "active_rooms": len(active_rooms)
+    }
+@app.websocket("/ws/matchmaking")
+async def matchmaking_socket(websocket: WebSocket):
+    await websocket.accept()
+
+    player_id = str(uuid.uuid4())
+    player = {
+        "id": player_id,
+        "ws": websocket
+    }
+
+    waiting_players.append(player)
+    print("🟢 PLAYER CONNECTED:", player_id)
+    print("📋 QUEUE SIZE:", len(waiting_players))
+
+    try:
+        await websocket.send_json({
+            "type": "queue_joined",
+            "playerId": player_id,
+            "message": "Waiting for another player..."
+        })
+
+        if len(waiting_players) >= 2:
+            print("🔥 MATCH FOUND!")
+            p1 = waiting_players.pop(0)
+            p2 = waiting_players.pop(0)
+            room_id = str(uuid.uuid4())
+
+            active_rooms[room_id] = {
+                "players": [p1["id"], p2["id"]]
+            }
+
+            await p1["ws"].send_json({
+                "type": "room_joined",
+                "roomId": room_id,
+                "playerId": p1["id"],
+                "side": "left",
+                "opponentId": p2["id"],
+                "message": "Opponent found!"
+            })
+
+            await p2["ws"].send_json({
+                "type": "room_joined",
+                "roomId": room_id,
+                "playerId": p2["id"],
+                "side": "right",
+                "opponentId": p1["id"],
+                "message": "Opponent found!"
+            })
+
+        while True:
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+        if player in waiting_players:
+            waiting_players.remove(player)
 app.include_router(api_router)
 
 app.add_middleware(

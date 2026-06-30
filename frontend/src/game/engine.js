@@ -93,12 +93,25 @@ export const buyBow = (state, bowId) => {
 };
 
 export const buyItem = (state, itemId) => {
-  const item = ITEMS[itemId];
-  if (!item || state.ownedItems.includes(itemId) || state.coins < item.cost) return false;
-  state.coins -= item.cost;
-  state.ownedItems.push(itemId);
-  persistProgress(state);
-  return true;
+    const item = ITEMS[itemId];
+    if (!item || state.coins < item.cost) return false;
+
+    // Consumable itemler tekrar tekrar alınabilir
+    if (item.consumable) {
+        state.coins -= item.cost;
+        state.ownedItems.push(itemId);
+        persistProgress(state);
+        return true;
+    }
+
+    // Normal itemler sadece 1 kez alınabilir
+    if (state.ownedItems.includes(itemId)) return false;
+
+    state.coins -= item.cost;
+    state.ownedItems.push(itemId);
+
+    persistProgress(state);
+    return true;
 };
 
 export const resetForNewGame = (state) => {
@@ -123,6 +136,9 @@ export const resetForNewGame = (state) => {
   state.enemyProjectiles = [];
   state.shockwaves = [];
   state.shake = 0;
+  state.chainUntil = 0;
+  state.nextShotExplosive = false;
+  state.lasers = [];
   state._megaBossSpawned = false;
   state.status = "playing";
   state.theme = getThemeForLevel(1);
@@ -161,7 +177,8 @@ export const releaseShot = (state) => {
   const isTriple = state.activePowerUp?.type === "triple" && state.activePowerUp.ammo > 0;
   const isExplosive =
     (state.activePowerUp?.type === "explosive" && state.activePowerUp.ammo > 0) ||
-    bow.explosiveByDefault === true;
+    bow.explosiveByDefault === true ||
+    state.nextShotExplosive === true;
 
   // Determine arrow count: bow's intrinsic count, boosted by triple powerup
   let arrowCount = bow.arrowCount;
@@ -190,13 +207,55 @@ export const releaseShot = (state) => {
     });
   });
 
-  if (isTriple || (isExplosive && !bow.explosiveByDefault)) {
+  if (isTriple || (isExplosive && !bow.explosiveByDefault && !state.nextShotExplosive)) {
     if (state.activePowerUp) {
       state.activePowerUp.ammo -= 1;
       if (state.activePowerUp.ammo <= 0) state.activePowerUp = null;
     }
   }
+  // Consume bomb-arrow flag after firing
+  if (state.nextShotExplosive) state.nextShotExplosive = false;
   sounds.arrowShoot();
+};
+
+// === Consumable actions (called from UI) ===
+export const activateBoltConsumable = (state, durationMs = 10000) => {
+  state.chainUntil = performance.now() + durationMs;
+};
+export const activateBombArrowConsumable = (state) => {
+  state.nextShotExplosive = true;
+};
+export const fireLaser = (state) => {
+  if (state.status !== "playing") return;
+  // Aim along the current bow direction
+  const angle = state.bow.angle;
+  const len = Math.hypot(state.width, state.height) * 1.2;
+  const x2 = state.bow.x + Math.cos(angle) * len;
+  const y2 = state.bow.y + Math.sin(angle) * len;
+  state.lasers = state.lasers || [];
+  state.lasers.push({ x1: state.bow.x, y1: state.bow.y, x2, y2, life: 1 });
+  state.shake = Math.max(state.shake || 0, 14);
+  sounds.explosion();
+  // Damage anything within a wide corridor along the beam
+  const beamHalfWidth = 28;
+  const dirX = Math.cos(angle), dirY = Math.sin(angle);
+  for (const t of state.targets) {
+    if (!t.alive) continue;
+    // Vector from bow to target
+    const vx = t.x - state.bow.x, vy = t.y - state.bow.y;
+    const proj = vx * dirX + vy * dirY; // along beam
+    if (proj < 0 || proj > len) continue;
+    const perp = Math.abs(vx * -dirY + vy * dirX); // perpendicular distance
+    if (perp > beamHalfWidth + t.r) continue;
+    if (t.type === "boss" || t.type === "megaBoss") {
+      // Halve HP (bosses don't die instantly)
+      const half = Math.ceil(t.hp / 2);
+      damageTarget(state, t, half);
+    } else {
+      // Instant kill normal targets
+      damageTarget(state, t, t.hp);
+    }
+  }
 };
 
 const spawnTarget = (state) => {
@@ -475,6 +534,29 @@ export const updatePhysics = (state, dt) => {
           damageTarget(state, t, 1);
         }
         a.alive = false;
+        // BOLT consumable: chain to nearest balloon while active
+        if (state.chainUntil && performance.now() < state.chainUntil && !a._chainSpawned) {
+          let nearest = null, nd = 280 * 280;
+          for (const ct of state.targets) {
+            if (!ct.alive || ct === t) continue;
+            if (ct.type !== "balloon" && ct.type !== "giantBalloon" && ct.type !== "bullseye") continue;
+            const cdx = ct.x - t.x, cdy = ct.y - t.y;
+            const dist2 = cdx * cdx + cdy * cdy;
+            if (dist2 < nd) { nd = dist2; nearest = ct; }
+          }
+          if (nearest) {
+            const cdx = nearest.x - t.x, cdy = nearest.y - t.y;
+            const dist = Math.hypot(cdx, cdy) || 1;
+            const sp = 18;
+            state.arrows.push({
+              x: t.x, y: t.y,
+              vx: (cdx / dist) * sp, vy: (cdy / dist) * sp,
+              rotation: Math.atan2(cdy, cdx),
+              alive: true, explosive: false, bowId: a.bowId,
+              trail: [], _chainSpawned: true, _chain: true,
+            });
+          }
+        }
         break;
       }
     }
@@ -651,6 +733,10 @@ export const updatePhysics = (state, dt) => {
     w.life -= 0.04;
   }
   state.shockwaves = (state.shockwaves || []).filter((w) => w.life > 0);
+
+  // Laser beams (fade quickly, render-only after damage applied at fire time)
+  for (const ls of state.lasers || []) ls.life -= 0.06;
+  state.lasers = (state.lasers || []).filter((l) => l.life > 0);
 
   // Screen shake decay
   if (state.shake > 0) state.shake = Math.max(0, state.shake - 0.6);

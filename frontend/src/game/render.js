@@ -656,6 +656,34 @@ export const drawScene = (ctx, state, time) => {
     ctx.restore();
   }
   drawParticles(ctx, state);
+  // Laser beams (drawn above particles, below bow)
+  for (const ls of state.lasers || []) {
+    const alpha = Math.max(0, ls.life);
+    ctx.save();
+    // Outer glow
+    ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.35})`;
+    ctx.lineWidth = 38;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ls.x1, ls.y1);
+    ctx.lineTo(ls.x2, ls.y2);
+    ctx.stroke();
+    // Mid beam
+    ctx.strokeStyle = `rgba(248, 113, 113, ${alpha * 0.9})`;
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.moveTo(ls.x1, ls.y1);
+    ctx.lineTo(ls.x2, ls.y2);
+    ctx.stroke();
+    // Hot core
+    ctx.strokeStyle = `rgba(255, 240, 230, ${alpha})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(ls.x1, ls.y1);
+    ctx.lineTo(ls.x2, ls.y2);
+    ctx.stroke();
+    ctx.restore();
+  }
   drawBow(ctx, state);
   drawFloatTexts(ctx, state);
 

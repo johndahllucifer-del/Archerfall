@@ -80,6 +80,15 @@
 - **Boss fireballs now destructible**: arrows can shoot down incoming fireballs (+15 pts; +30 for mega-boss fireballs), with sparkle particles + shockwave ring
 - **More effects**: screen shake on hits/explosions/mega-boss spawn, expanding shockwave rings on explosions and mega-boss death, larger particle bursts for big enemies
 - Verified end-to-end via playwright: zero page errors during gameplay, smooth render
+
+### Iteration 7 (2026-02) — Consumable items finished
+- **Fixed broken `useItem` function** in Game.jsx (was orphaned, syntax-error; also ESLint hooks-rule violation due to the "use" prefix → renamed to `consumeItem`)
+- **Bolt** (350c): on activation, sets `state.chainUntil = now + 10000ms`. Arrow→target hit while active spawns ONE chain arrow toward the nearest balloon/giantBalloon/bullseye within 280px. Chain arrows don't re-chain.
+- **Bomb Arrow** (500c): sets `state.nextShotExplosive = true`. Next `releaseShot` makes that arrow explosive (uses existing `explodeAt` AoE), then auto-clears the flag.
+- **Red Laser** (800c): `fireLaser(state)` draws a glowing 3-layer beam along the bow's aim, instantly kills normal targets in a corridor, halves boss/megaBoss HP (`damageTarget(t, ceil(t.hp/2))`).
+- **Shop**: consumables in Items tab show count badge (`x2`), have both `Use` and `Buy` buttons, are purchasable multiple times, never get an "Owned" badge.
+- **Inventory hotbar**: persistent strip above canvas with `Bolt`, `Bomb`, `Laser` quick-use buttons (disabled when count=0 or not playing).
+- Did NOT touch: leaderboard, multiplayer placeholder, payment endpoints, bow shop, existing items (quickDraw, eagleEye, luckyCharm, extraLife, magnet) — all preserved.
 - All 10 testing-agent flows passed (100%)
 
 ## Personas
