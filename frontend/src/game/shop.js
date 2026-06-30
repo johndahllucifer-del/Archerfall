@@ -130,7 +130,6 @@ export const ITEMS = {
     icon: Magnet,
     color: "from-violet-500 to-purple-700",
   },
-};
 bolt: {
   id: "bolt",
   name: "Bolt",
