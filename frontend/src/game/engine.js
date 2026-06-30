@@ -93,12 +93,25 @@ export const buyBow = (state, bowId) => {
 };
 
 export const buyItem = (state, itemId) => {
-  const item = ITEMS[itemId];
-  if (!item || state.ownedItems.includes(itemId) || state.coins < item.cost) return false;
-  state.coins -= item.cost;
-  state.ownedItems.push(itemId);
-  persistProgress(state);
-  return true;
+    const item = ITEMS[itemId];
+    if (!item || state.coins < item.cost) return false;
+
+    // Consumable itemler tekrar tekrar alınabilir
+    if (item.consumable) {
+        state.coins -= item.cost;
+        state.ownedItems.push(itemId);
+        persistProgress(state);
+        return true;
+    }
+
+    // Normal itemler sadece 1 kez alınabilir
+    if (state.ownedItems.includes(itemId)) return false;
+
+    state.coins -= item.cost;
+    state.ownedItems.push(itemId);
+
+    persistProgress(state);
+    return true;
 };
 
 export const resetForNewGame = (state) => {
