@@ -159,6 +159,7 @@ red_laser: {
   color: "from-red-600 to-rose-700",
   consumable: true,
 },
+  };
 const COINS_KEY = "archery_coins_v1";
 const OWNED_BOWS_KEY = "archery_owned_bows_v1";
 const OWNED_ITEMS_KEY = "archery_owned_items_v1";
