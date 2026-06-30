@@ -137,6 +137,7 @@ bolt: {
   cost: 350,
   icon: Zap,
   color: "from-yellow-400 to-orange-500",
+  consumable: true,
 },
 
 bomb_arrow: {
@@ -146,6 +147,7 @@ bomb_arrow: {
   cost: 500,
   icon: Bomb,
   color: "from-orange-500 to-red-600",
+  consumable: true,
 },
 
 red_laser: {
@@ -155,6 +157,7 @@ red_laser: {
   cost: 800,
   icon: Flame,
   color: "from-red-600 to-rose-700",
+  consumable: true,
 },
 const COINS_KEY = "archery_coins_v1";
 const OWNED_BOWS_KEY = "archery_owned_bows_v1";
