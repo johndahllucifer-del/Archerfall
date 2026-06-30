@@ -221,40 +221,6 @@ const [nextShotItem, setNextShotItem] = useState(null);
       setPaying(false);
     }
   };
-  const buyShopItem = (itemId) => {
-  const item = getShopItemById(itemId);
-  if (!item) return;
-
-  const coins = stateRef.current?.coins ?? 0;
-
-  if (coins < item.price) {
-    toast.error("Not enough gold!");
-    return;
-  }
-
-  stateRef.current.coins = coins - item.price;
-
-  setInventory((prev) => ({
-    ...prev,
-    [itemId]: (prev[itemId] || 0) + 1,
-  }));
-
-  setTick((t) => t + 1);
-  toast.success(`${item.icon} ${item.name} purchased!`);
-};
-const useShopItem = (itemId) => {
-  if ((inventory[itemId] || 0) <= 0) {
-    toast.error("You don't have this item!");
-    return;
-  }
-
-  const item = getShopItemById(itemId);
-  if (!item) return;
-
-  setInventory((prev) => ({
-    ...prev,
-    [itemId]: Math.max(0, (prev[itemId] || 0) - 1),
-  }));
 
   if (itemId === "bolt") {
     setBoltUntil(Date.now() + 10000);
