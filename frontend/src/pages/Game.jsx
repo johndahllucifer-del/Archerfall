@@ -182,6 +182,21 @@ const [nextShotItem, setNextShotItem] = useState(null);
           }
           toast.success(`+${res.coins_credited} coins added!`, { id: "pay" });
           sounds.powerUp();
+          if (itemId === "bolt") {
+  setBoltUntil(Date.now() + 10000);
+  toast.success("⚡ Bolt activated for 10 seconds!");
+}
+
+if (itemId === "bomb_arrow") {
+  setNextShotItem("bomb_arrow");
+  toast.success("💣 Your next arrow is a Bomb Arrow!");
+}
+
+if (itemId === "red_laser") {
+  setActiveItem("red_laser");
+  toast.success("🔴 Red Laser ready!");
+}
+};
         } else if (purpose === "support") {
           toast.success("Thanks for the support 💛", { id: "pay" });
           sounds.levelUp();
