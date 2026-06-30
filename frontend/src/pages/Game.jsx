@@ -1036,6 +1036,7 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
             })}
           </TabsContent>
           <TabsContent value="items" className="mt-4 grid sm:grid-cols-2 gap-3 max-h-[55vh] overflow-y-auto pr-1">
+            {console.log("SHOP ITEMS:", Object.keys(ITEMS))}
             {Object.values(ITEMS).map((item) => {
               const owned = state.ownedItems.includes(item.id);
               const canAfford = state.coins >= item.cost;
