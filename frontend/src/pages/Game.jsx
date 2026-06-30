@@ -242,6 +242,35 @@ const [nextShotItem, setNextShotItem] = useState(null);
   setTick((t) => t + 1);
   toast.success(`${item.icon} ${item.name} purchased!`);
 };
+const useShopItem = (itemId) => {
+  if ((inventory[itemId] || 0) <= 0) {
+    toast.error("You don't have this item!");
+    return;
+  }
+
+  const item = getShopItemById(itemId);
+  if (!item) return;
+
+  setInventory((prev) => ({
+    ...prev,
+    [itemId]: Math.max(0, (prev[itemId] || 0) - 1),
+  }));
+
+  if (itemId === "bolt") {
+    setBoltUntil(Date.now() + 10000);
+    toast.success("⚡ Bolt activated for 10 seconds!");
+  }
+
+  if (itemId === "bomb_arrow") {
+    setNextShotItem("bomb_arrow");
+    toast.success("💣 Your next arrow is a Bomb Arrow!");
+  }
+
+  if (itemId === "red_laser") {
+    setActiveItem("red_laser");
+    toast.success("🔴 Red Laser ready!");
+  }
+};  
 
   // Keyboard shortcuts: Space=pause, R=restart, S=shop, L=leaderboard, Esc closes dialogs
   useEffect(() => {
