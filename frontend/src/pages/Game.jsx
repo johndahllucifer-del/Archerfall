@@ -397,6 +397,53 @@ if (id === "red_laser") {
 
     forceUpdate();
   };
+  const useBombArrow = () => {
+  const state = stateRef.current;
+
+  if (!state || state.status !== "playing") {
+    toast.error("Start the game first!");
+    return;
+  }
+
+  if ((inventory.bomb_arrow || 0) <= 0) {
+    toast.error("No Bomb Arrows left!");
+    return;
+  }
+
+  setNextShotItem("bomb_arrow");
+
+  setInventory((prev) => ({
+    ...prev,
+    bomb_arrow: Math.max(0, (prev.bomb_arrow || 0) - 1),
+  }));
+
+  sounds.click();
+  toast.success("💣 Your next shot is a Bomb Arrow!");
+};
+
+const useRedLaser = () => {
+  const state = stateRef.current;
+
+  if (!state || state.status !== "playing") {
+    toast.error("Start the game first!");
+    return;
+  }
+
+  if ((inventory.red_laser || 0) <= 0) {
+    toast.error("No Big Lasers left!");
+    return;
+  }
+
+  setActiveItem("red_laser");
+
+  setInventory((prev) => ({
+    ...prev,
+    red_laser: Math.max(0, (prev.red_laser || 0) - 1),
+  }));
+
+  sounds.click();
+  toast.success("🔴 Big Laser activated!");
+};
 
   const state = stateRef.current;
   const status = state?.status || "menu";
