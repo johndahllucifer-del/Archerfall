@@ -17,6 +17,7 @@ import {
   buyBow,
   equipBow,
   buyItem,
+  fireRedLaser,
 } from "@/game/engine";
 import { drawScene } from "@/game/render";
 import { initAudio, setSoundEnabled, sounds } from "@/game/sounds";
