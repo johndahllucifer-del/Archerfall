@@ -293,10 +293,15 @@ const [nextShotItem, setNextShotItem] = useState(null);
   };
 
   const onMouseUp = () => {
-    const state = stateRef.current;
-    if (!state) return;
-    releaseShot(state);
-  };
+  const state = stateRef.current;
+  if (!state) return;
+
+  releaseShot(state, nextShotItem);
+
+  if (nextShotItem === "bomb_arrow") {
+    setNextShotItem(null);
+  }
+};
 
   // Touch handlers (mobile)
   const onTouchStart = (e) => {
@@ -321,7 +326,11 @@ const [nextShotItem, setNextShotItem] = useState(null);
     e.preventDefault();
     const state = stateRef.current;
     if (!state) return;
-    releaseShot(state);
+    releaseShot(state, nextShotItem);
+
+if (nextShotItem === "bomb_arrow") {
+  setNextShotItem(null);
+}
   };
 
   const startGame = () => {
