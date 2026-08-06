@@ -155,7 +155,7 @@ export const startCharge = (state) => {
   sounds.bowDraw();
 };
 
-export const releaseShot = (state) => {
+export const releaseShot = (state, shotItem = null) => {
   if (state.status !== "playing" || !state.charging) return;
   const heldMs = performance.now() - state.chargeStart;
   const chargeDur = getEffectiveChargeMs(state);
@@ -173,6 +173,7 @@ export const releaseShot = (state) => {
   const angle = state.bow.angle;
   const isTriple = state.activePowerUp?.type === "triple" && state.activePowerUp.ammo > 0;
   const isExplosive =
+    shotItem === "bomb_arrow" ||
     (state.activePowerUp?.type === "explosive" && state.activePowerUp.ammo > 0) ||
     bow.explosiveByDefault === true;
 
