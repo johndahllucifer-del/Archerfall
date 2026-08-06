@@ -1,3 +1,4 @@
+import { applyDeveloperMoney } from "./infmoney";
 // Shop catalog + persistence helpers.
 import { Crown, Gem, Sparkles, Zap, Eye, Heart, Clover, Bomb, Flame, Magnet, } from "lucide-react";
 
