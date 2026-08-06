@@ -745,7 +745,7 @@ const [nextShotItem, setNextShotItem] = useState(null);
         🏰 Castle Siege
       </DialogTitle>
       <DialogDescription className="text-slate-300 text-center">
-        Real-time 1v1 matchmaking queue
+        Real-time 1v1 matchmaking queuesm
       </DialogDescription>
     </DialogHeader>
 
@@ -1041,6 +1041,9 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
       </div>
             {Object.values(ITEMS).map((item) => {
               const owned = state.ownedItems.includes(item.id);
+          const itemCount = state.ownedItems.filter(
+           (ownedItemId) => ownedItemId === item.id
+           ).length;
               const canAfford = state.coins >= item.cost;
               const Icon = item.icon;
               return (
