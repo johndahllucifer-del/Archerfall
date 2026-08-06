@@ -429,6 +429,36 @@ const damageTarget = (state, target, dmg = 1) => {
     spawnParticles(state, target.x, target.y, "#fff", 6);
   }
 };
+export const fireRedLaser = (state) => {
+  if (!state || state.status !== "playing") return false;
+
+  let hitAnyTarget = false;
+
+  state.targets.forEach((target) => {
+    if (!target.alive) return;
+
+    damageTarget(state, target, Math.max(1, target.hp));
+    hitAnyTarget = true;
+  });
+
+  if (!hitAnyTarget) return false;
+
+  state.shockwaves = state.shockwaves || [];
+  state.shockwaves.push({
+    x: state.width / 2,
+    y: state.height / 2,
+    r: 20,
+    maxR: Math.max(state.width, state.height),
+    life: 1,
+    color: "#ef4444",
+  });
+
+  state.shake = Math.max(state.shake || 0, 14);
+
+  sounds.explosion();
+
+  return true;
+};
 
 const checkLevelUp = (state) => {
   if (state.targetsHit >= state.targetsForLevel) {
