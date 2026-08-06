@@ -548,6 +548,37 @@ const useRedLaser = () => {
               />
             ))}
           </div>
+          <Button
+  size="sm"
+  variant="outline"
+  disabled={(inventory.bomb_arrow || 0) <= 0 || status !== "playing"}
+  onClick={useBombArrow}
+  className={`bg-white/80 border-orange-300 btn-press ${
+    nextShotItem === "bomb_arrow"
+      ? "ring-2 ring-orange-500 bg-orange-100"
+      : ""
+  }`}
+  data-testid="use-bomb-arrow"
+>
+  <Bomb className="w-4 h-4 mr-1 text-orange-600" />
+  Bomb ×{inventory.bomb_arrow || 0}
+</Button>
+
+<Button
+  size="sm"
+  variant="outline"
+  disabled={(inventory.red_laser || 0) <= 0 || status !== "playing"}
+  onClick={useRedLaser}
+  className={`bg-white/80 border-red-300 btn-press ${
+    activeItem === "red_laser"
+      ? "ring-2 ring-red-500 bg-red-100"
+      : ""
+  }`}
+  data-testid="use-red-laser"
+>
+  <Flame className="w-4 h-4 mr-1 text-red-600" />
+  Laser ×{inventory.red_laser || 0}
+</Button>
           {state?.activePowerUp && (
             <Badge className="bg-gradient-to-r from-cyan-400 to-violet-500 text-white px-3 py-1.5 text-sm border-0 scale-pop" data-testid="hud-powerup">
               {state.activePowerUp.type === "triple" && <><Zap className="w-3.5 h-3.5 mr-1" />Triple x{state.activePowerUp.ammo}</>}
