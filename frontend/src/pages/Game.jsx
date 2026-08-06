@@ -1069,21 +1069,54 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
                     <span className="flex items-center gap-1 text-sm font-mono-game font-bold text-amber-700">
                       <Coins className="w-3.5 h-3.5" /> {item.cost}
                     </span>
-                    {owned ? (
-                      <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white" data-testid={`shop-item-${item.id}-owned`}>
-                        <Check className="w-3 h-3 mr-1" /> Owned
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        disabled={!canAfford}
-                        onClick={() => onBuyItem(item.id)}
-                        className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:opacity-90 disabled:opacity-40"
-                        data-testid={`shop-item-${item.id}-buy`}
-                      >
-                        {canAfford ? "Buy" : <><Lock className="w-3 h-3 mr-1" /> Need {item.cost - state.coins}</>}
-                      </Button>
-                    )}
+                    {item.consumable ? (
+  <div className="flex items-center gap-2">
+    <Badge className="bg-slate-700 text-white">
+      ×{itemCount}
+    </Badge>
+
+    <Button
+      size="sm"
+      disabled={!canAfford}
+      onClick={() => onBuyItem(item.id)}
+      className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:opacity-90 disabled:opacity-40"
+      data-testid={`shop-item-${item.id}-buy`}
+    >
+      {canAfford ? (
+        "Buy Again"
+      ) : (
+        <>
+          <Lock className="w-3 h-3 mr-1" />
+          Need {item.cost - state.coins}
+        </>
+      )}
+    </Button>
+  </div>
+) : owned ? (
+  <Badge
+    className="bg-emerald-500 hover:bg-emerald-500 text-white"
+    data-testid={`shop-item-${item.id}-owned`}
+  >
+    <Check className="w-3 h-3 mr-1" /> Owned
+  </Badge>
+) : (
+  <Button
+    size="sm"
+    disabled={!canAfford}
+    onClick={() => onBuyItem(item.id)}
+    className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white hover:opacity-90 disabled:opacity-40"
+    data-testid={`shop-item-${item.id}-buy`}
+  >
+    {canAfford ? (
+      "Buy"
+    ) : (
+      <>
+        <Lock className="w-3 h-3 mr-1" />
+        Need {item.cost - state.coins}
+      </>
+    )}
+  </Button>
+)}
                   </div>
                 </Card>
               );
