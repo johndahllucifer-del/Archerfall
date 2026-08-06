@@ -167,8 +167,8 @@ const OWNED_ITEMS_KEY = "archery_owned_items_v1";
 const EQUIPPED_BOW_KEY = "archery_equipped_bow_v1";
 
 export const loadProgress = () => {
-  const coins = parseInt(localStorage.getItem(COINS_KEY) || "0", 10);
-  const coins = applyDeveloperMoney(savedCoins);
+  const savedCoins = parseInt(localStorage.getItem(COINS_KEY) || "0", 10);
+const coins = applyDeveloperMoney(savedCoins);
 
 localStorage.setItem(COINS_KEY, String(coins));
   const ownedBows = JSON.parse(localStorage.getItem(OWNED_BOWS_KEY) || '["wooden"]');
