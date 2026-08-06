@@ -378,14 +378,22 @@ const [nextShotItem, setNextShotItem] = useState(null);
         }
 
      if (id === "bomb_arrow") {
-            setNextShotItem("bomb_arrow");
-            toast.success("💣 Bomb Arrow ready!");
-        }
+  setInventory((prev) => ({
+    ...prev,
+    bomb_arrow: prev.bomb_arrow + 1,
+  }));
 
-     if (id === "red_laser") {
-            setActiveItem("red_laser");
-            toast.success("🔴 Red Laser ready!");
-        }
+  toast.success("💣 Bomb Arrow added to inventory!");
+}
+
+if (id === "red_laser") {
+  setInventory((prev) => ({
+    ...prev,
+    red_laser: prev.red_laser + 1,
+  }));
+
+  toast.success("🔴 Red Laser added to inventory!");
+}
 
     forceUpdate();
   };
