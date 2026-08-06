@@ -382,9 +382,13 @@ if (nextShotItem === "bomb_arrow") {
     if (buyItem(state, id)) sounds.powerUp();
     forceUpdate();
     if (id === "bolt") {
-            setBoltUntil(Date.now() + 10000);
-            toast.success("⚡ Bolt activated for 10 seconds!");
-        }
+  setInventory((prev) => ({
+    ...prev,
+    bolt: (prev.bolt || 0) + 1,
+  }));
+
+  toast.success("⚡ Bolt added to inventory!");
+}
 
      if (id === "bomb_arrow") {
   setInventory((prev) => ({
