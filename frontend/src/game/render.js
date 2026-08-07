@@ -782,6 +782,140 @@ state.bombTexts = (state.bombTexts || []).filter((b) => {
 
   ctx.save();
 
+  // ===== PATLAMA ÇEKİRDEĞİ =====
+  if (progress < 0.35) {
+    const blastProgress = progress / 0.35;
+    const radius = (b.blastRadius || 150) * blastProgress;
+
+    const gradient = ctx.createRadialGradient(
+      b.x,
+      b.y,
+      0,
+      b.x,
+      b.y,
+      radius
+    );
+
+    gradient.addColorStop(0, "rgba(255,255,255,1)");
+    gradient.addColorStop(0.2, "rgba(255,245,120,0.95)");
+    gradient.addColorStop(0.5, "rgba(255,170,0,0.9)");
+    gradient.addColorStop(0.8, "rgba(255,90,0,0.65)");
+    gradient.addColorStop(1, "rgba(255,60,0,0)");
+
+    ctx.globalAlpha = 1 - blastProgress * 0.4;
+    ctx.fillStyle = gradient;
+
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ===== GRİ DUMAN BULUTU =====
+  if (progress > 0.12) {
+    const smokeProgress = (progress - 0.12) / 0.88;
+    const smokeAlpha = Math.max(0, 1 - smokeProgress);
+
+    const smokePuffs = 14;
+
+    for (let i = 0; i < smokePuffs; i++) {
+      const angle =
+        (i / smokePuffs) * Math.PI * 2 +
+        Math.sin(i * 12.91) * 0.3;
+
+      const distance =
+        30 +
+        smokeProgress * 90 +
+        (i % 3) * 14;
+
+      const px = b.x + Math.cos(angle) * distance;
+      const py =
+        b.y +
+        Math.sin(angle) * distance -
+        smokeProgress * 25;
+
+      const size =
+        22 +
+        (i % 4) * 8 +
+        smokeProgress * 22;
+
+      const g = ctx.createRadialGradient(
+        px,
+        py,
+        0,
+        px,
+        py,
+        size
+      );
+
+      g.addColorStop(0, `rgba(75,85,99,${0.75 * smokeAlpha})`);
+      g.addColorStop(0.55, `rgba(107,114,128,${0.55 * smokeAlpha})`);
+      g.addColorStop(1, "rgba(156,163,175,0)");
+
+      ctx.fillStyle = g;
+
+      ctx.beginPath();
+      ctx.arc(px, py, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ===== TURUNCU PARÇALAR =====
+  if (progress < 0.45) {
+    const debrisAlpha = 1 - progress / 0.45;
+
+    ctx.globalAlpha = debrisAlpha;
+    ctx.fillStyle = "#ff7a00";
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const distance = 40 + progress * 180;
+
+      const px = b.x + Math.cos(angle) * distance;
+      const py = b.y + Math.sin(angle) * distance;
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle);
+
+      ctx.fillRect(-8, -3, 16, 6);
+
+      ctx.restore();
+    }
+  }
+
+  // ===== BOMB! YAZISI =====
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const scale =
+    1 +
+    Math.sin(Math.min(progress, 0.5) * Math.PI) * 0.55;
+
+  ctx.translate(b.x, b.y);
+  ctx.scale(scale, scale);
+
+  ctx.font = "bold 64px 'Bricolage Grotesque', sans-serif";
+
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = "#111111";
+  ctx.strokeText(b.text, 0, 0);
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillText(b.text, 0, 0);
+
+  ctx.restore();
+
+  return true;
+});
+  const age = performance.now() - b.createdAt;
+  if (age >= b.duration) return false;
+
+  const progress = age / b.duration;
+  const alpha = 1 - progress;
+
+  ctx.save();
+
   ctx.globalAlpha = alpha;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
