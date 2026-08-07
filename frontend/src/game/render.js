@@ -701,6 +701,66 @@ if (state.lasers?.length) {
     ctx.stroke();
     ctx.restore();
   }
+  // Bolt lightning chains
+if (state.lightningChains?.length) {
+  state.lightningChains = state.lightningChains.filter((bolt) => {
+    const age = time - bolt.createdAt;
+
+    if (age > bolt.duration) return false;
+
+    const alpha = 1 - age / bolt.duration;
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    const points = 8;
+    const dx = bolt.x2 - bolt.x1;
+    const dy = bolt.y2 - bolt.y1;
+
+    const perpX = -dy;
+    const perpY = dx;
+    const len = Math.sqrt(perpX * perpX + perpY * perpY) || 1;
+
+    ctx.beginPath();
+    ctx.moveTo(bolt.x1, bolt.y1);
+
+    for (let i = 1; i < points; i++) {
+      const t = i / points;
+      const baseX = bolt.x1 + dx * t;
+      const baseY = bolt.y1 + dy * t;
+      const jitter = (Math.random() - 0.5) * 22;
+
+      ctx.lineTo(
+        baseX + (perpX / len) * jitter,
+        baseY + (perpY / len) * jitter
+      );
+    }
+
+    ctx.lineTo(bolt.x2, bolt.y2);
+
+    // Mavi dış parlama
+    ctx.globalAlpha = alpha * 0.4;
+    ctx.strokeStyle = "#2196f3";
+    ctx.lineWidth = 12;
+    ctx.stroke();
+
+    // Parlak mavi elektrik
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = "#00bfff";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // Beyaz merkez
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
+
+    return true;
+  });
+}
   drawParticles(ctx, state);
   drawBow(ctx, state);
   drawFloatTexts(ctx, state);
