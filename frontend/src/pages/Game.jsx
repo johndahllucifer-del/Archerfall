@@ -303,10 +303,21 @@ const [nextShotItem, setNextShotItem] = useState(null);
   const state = stateRef.current;
   if (!state) return;
 
-  releaseShot(state, nextShotItem);
+  const firedItem = nextShotItem;
+  const fired = releaseShot(state, firedItem);
 
-  if (nextShotItem === "bomb_arrow") {
+  if (fired && firedItem === "bomb_arrow") {
     setNextShotItem(null);
+  }
+
+  if (fired && firedItem === "red_laser") {
+    setInventory((prev) => ({
+      ...prev,
+      red_laser: Math.max(0, (prev.red_laser || 0) - 1),
+    }));
+
+    setNextShotItem(null);
+    setActiveItem(null);
   }
 };
 
