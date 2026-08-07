@@ -355,7 +355,6 @@ const drawArrow = (ctx, a) => {
     ctx.fill();
   }
 }
-  }
   ctx.save();
   ctx.translate(a.x, a.y);
   ctx.rotate(a.rotation);
