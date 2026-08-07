@@ -64,6 +64,12 @@ export default function Game() {
     red_laser: 0,
   };
 });
+  useEffect(() => {
+  localStorage.setItem(
+    "archerfall_inventory_v1",
+    JSON.stringify(inventory)
+  );
+}, [inventory]);
 
 const [activeItem, setActiveItem] = useState(null);
 const [boltUntil, setBoltUntil] = useState(0);
