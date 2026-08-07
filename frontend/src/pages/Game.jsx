@@ -470,6 +470,29 @@ const useRedLaser = () => {
   sounds.click();
   toast.success("🔴 Big Laser fired!");
 };
+  const useBolt = () => {
+  const state = stateRef.current;
+
+  if (!state || state.status !== "playing") {
+    toast.error("Start the game first!");
+    return;
+  }
+
+  if ((inventory.bolt || 0) <= 0) {
+    toast.error("No Bolts left!");
+    return;
+  }
+
+  setInventory((prev) => ({
+    ...prev,
+    bolt: Math.max(0, (prev.bolt || 0) - 1),
+  }));
+
+  setBoltUntil(Date.now() + 10000);
+
+  sounds.click();
+  toast.success("⚡ Bolt activated for 10 seconds!");
+};
 
   const state = stateRef.current;
   const status = state?.status || "menu";
