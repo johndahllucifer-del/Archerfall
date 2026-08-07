@@ -372,6 +372,7 @@ const [nextShotItem, setNextShotItem] = useState(null);
 
   if (fired && firedItem === "bomb_arrow") {
     setNextShotItem(null);
+    state.nextShotItem = null;
   }
 
   if (fired && firedItem === "red_laser") {
@@ -506,6 +507,7 @@ if (id === "red_laser") {
   }
 
   setNextShotItem("bomb_arrow");
+    state.nextShotItem = "bomb_arrow";
 
   setInventory((prev) => ({
     ...prev,
