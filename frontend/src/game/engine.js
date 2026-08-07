@@ -466,13 +466,13 @@ const explodeBombArrowAt = (state, x, y) => {
   // BOMB! yazısını sonra render.js'de göstereceğiz
   state.bombTexts = state.bombTexts || [];
   state.bombTexts.push({
-    x,
-    y,
-    text: "BOMB!",
-    createdAt: performance.now(),
-    duration: 700,
-  });
-};
+  x,
+  y,
+  text: "BOMB!",
+  createdAt: performance.now(),
+  duration: 900,
+  blastRadius: 150,
+});
 
 const getComboMult = (combo) => {
   if (combo >= 12) return 5;
