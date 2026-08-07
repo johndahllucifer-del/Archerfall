@@ -229,8 +229,8 @@ if (equippedBow.id === "emerald") {
     ctx.restore();
   };
 
-  // Ortadaki büyük zümrüt
-  drawCrystal(2, 0, 10, 0);
+  // Ortadaki ana zümrüt
+drawCrystal(14, 0, 18, Math.PI / 2);
 
   // Üst kol kristalleri
   drawCrystal(8, -24, 7, -0.35);
