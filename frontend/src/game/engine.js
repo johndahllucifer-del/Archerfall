@@ -672,7 +672,10 @@ if (a.bombArrow) {
   explodeAt(state, a.x, a.y);
 } else {
   damageTarget(state, t, 1);
-
+if (a.bowId === "emerald") {
+  spawnParticles(state, t.x, t.y, "#10b981", 18, true);
+  spawnParticles(state, t.x, t.y, "#a7f3d0", 10, false);
+}
   if (state.boltActive) {
     triggerBoltChain(state, t);
   }
