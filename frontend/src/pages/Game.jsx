@@ -44,6 +44,7 @@ export default function Game() {
   const [shopOpen, setShopOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
   const [mpOpen, setMpOpen] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(0);
   const [board, setBoard] = useState([]);
   const [playerName, setName] = useState(() => getPlayerName());
   const [nameDraft, setNameDraft] = useState("");
@@ -70,6 +71,46 @@ export default function Game() {
     JSON.stringify(inventory)
   );
 }, [inventory]);
+  useEffect(() => {
+  let playerId = localStorage.getItem("archerfall_player_id");
+
+  if (!playerId) {
+    playerId = crypto.randomUUID();
+    localStorage.setItem("archerfall_player_id", playerId);
+  }
+
+  const updateOnlineStatus = async () => {
+    try {
+      // Ben hâlâ online'ım
+      await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/online/heartbeat?player_id=${encodeURIComponent(playerId)}`,
+        {
+          method: "POST",
+        }
+      );
+
+      // Şu anda kaç kişi online?
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/online/count`
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      setOnlineCount(data.online || 0);
+    } catch (error) {
+      console.error("Online player count error:", error);
+    }
+  };
+
+  updateOnlineStatus();
+
+  const interval = setInterval(updateOnlineStatus, 10000);
+
+  return () => {
+    clearInterval(interval);
+  };
+}, []);
 
 const [activeItem, setActiveItem] = useState(null);
 const [boltUntil, setBoltUntil] = useState(0);
@@ -590,14 +631,30 @@ const useRedLaser = () => {
               {state?.targetsHit ?? 0}/{state?.targetsForLevel ?? 10}
             </span>
           </Badge>
-          <div className="flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white/80 border-rose-200" data-testid="hud-lives">
-            {[0, 1, 2].map((i) => (
-              <Heart
-                key={i}
-                className={`w-4 h-4 ${i < (state?.lives ?? 0) ? "text-rose-500 fill-rose-500" : "text-slate-300"}`}
-              />
-            ))}
-          </div>
+          <div className="flex flex-col items-center gap-1">
+
+  <div className="flex items-center gap-1 text-xs font-bold text-emerald-600">
+    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+    Online: {onlineCount}
+  </div>
+
+  <div
+    className="flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white/80 border-rose-200"
+    data-testid="hud-lives"
+  >
+    {[0, 1, 2].map((i) => (
+      <Heart
+        key={i}
+        className={`w-4 h-4 ${
+          i < (state?.lives ?? 0)
+            ? "text-rose-500 fill-rose-500"
+            : "text-slate-300"
+        }`}
+      />
+    ))}
+  </div>
+
+</div>
           <Button
   size="sm"
   variant="outline"
