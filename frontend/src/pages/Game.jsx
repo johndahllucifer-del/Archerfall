@@ -531,6 +531,13 @@ const useRedLaser = () => {
   }));
 
   setBoltUntil(Date.now() + 10000);
+    state.boltActive = true;
+
+setTimeout(() => {
+  if (stateRef.current) {
+    stateRef.current.boltActive = false;
+  }
+}, 10000);
 
   sounds.click();
   toast.success("⚡ Bolt activated for 10 seconds!");
