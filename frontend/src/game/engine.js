@@ -260,6 +260,9 @@ export const releaseShot = (state, shotItem = null) => {
       rotation: angle + spread,
       alive: true,
       explosive: isExplosive,
+      bombArrow: shotItem === "bomb_arrow",
+     bowId: bow.id,
+     trail: [],
       bowId: bow.id,
       trail: [],
     });
@@ -422,6 +425,52 @@ const explodeAt = (state, x, y) => {
     if (dx * dx + dy * dy < (radius + t.r) ** 2) {
       damageTarget(state, t, 3);
     }
+  });
+};
+const explodeBombArrowAt = (state, x, y) => {
+  sounds.explosion();
+
+  // Yoğun gri duman
+  spawnParticles(state, x, y, "#9ca3af", 90, true);
+  spawnParticles(state, x, y, "#6b7280", 70, true);
+  spawnParticles(state, x, y, "#374151", 50, true);
+
+  // Dev shockwave
+  state.shockwaves = state.shockwaves || [];
+  state.shockwaves.push({
+    x,
+    y,
+    r: 12,
+    maxR: 300,
+    life: 1.4,
+    color: "#6b7280",
+  });
+
+  // Daha güçlü ekran sarsıntısı
+  state.shake = Math.max(state.shake || 0, 22);
+
+  // Büyük hasar alanı
+  const radius = 240;
+
+  state.targets.forEach((t) => {
+    if (!t.alive) return;
+
+    const dx = t.x - x;
+    const dy = t.y - y;
+
+    if (dx * dx + dy * dy < (radius + t.r) ** 2) {
+      damageTarget(state, t, 6);
+    }
+  });
+
+  // BOMB! yazısını sonra render.js'de göstereceğiz
+  state.bombTexts = state.bombTexts || [];
+  state.bombTexts.push({
+    x,
+    y,
+    text: "BOMB!",
+    createdAt: performance.now(),
+    duration: 700,
   });
 };
 
@@ -619,7 +668,9 @@ export const updatePhysics = (state, dt) => {
       if (!t.alive) continue;
       const dx = a.x - t.x, dy = a.y - t.y;
       if (dx * dx + dy * dy < (t.r + 4) ** 2) {
-        if (a.explosive) {
+if (a.bombArrow) {
+  explodeBombArrowAt(state, a.x, a.y);
+} else if (a.explosive) {
   explodeAt(state, a.x, a.y);
 } else {
   damageTarget(state, t, 1);
