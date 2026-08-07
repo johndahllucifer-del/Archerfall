@@ -173,7 +173,7 @@ export const releaseShot = (state, shotItem = null) => {
   const angle = state.bow.angle;
   if (shotItem === "red_laser") {
   const laserLength = Math.max(state.width, state.height) * 1.6;
-  const laserWidth = 55;
+  const laserWidth = 85;
 
   const startX = state.bow.x + Math.cos(angle) * 30;
   const startY = state.bow.y + Math.sin(angle) * 30;
