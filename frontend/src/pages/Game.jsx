@@ -411,7 +411,7 @@ if (nextShotItem === "bomb_arrow") {
      if (id === "bomb_arrow") {
   setInventory((prev) => ({
     ...prev,
-    bomb_arrow: prev.bomb_arrow || 0) + 1,
+    bomb_arrow: (prev.bomb_arrow || 0) + 1,
   }));
 
   toast.success("💣 Bomb Arrow added to inventory!");
@@ -420,7 +420,7 @@ if (nextShotItem === "bomb_arrow") {
 if (id === "red_laser") {
   setInventory((prev) => ({
     ...prev,
-    red_laser: prev.red_laser || 0) + 1,
+    red_laser: (prev.red_laser || 0) + 1,
   }));
 
   toast.success("🔴 Red Laser added to inventory!");
