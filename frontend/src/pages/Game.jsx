@@ -448,15 +448,27 @@ const useRedLaser = () => {
     return;
   }
 
-  setActiveItem("red_laser");
+  const fired = fireRedLaser(state);
+
+  if (!fired) {
+    toast.error("No targets to hit!");
+    return;
+  }
 
   setInventory((prev) => ({
     ...prev,
     red_laser: Math.max(0, (prev.red_laser || 0) - 1),
   }));
 
+  setActiveItem("red_laser");
+
+  setTimeout(() => {
+    setActiveItem(null);
+  }, 500);
+
+  forceUpdate();
   sounds.click();
-  toast.success("🔴 Big Laser activated!");
+  toast.success("🔴 Big Laser fired!");
 };
 
   const state = stateRef.current;
