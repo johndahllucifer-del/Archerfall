@@ -432,6 +432,50 @@ const getComboMult = (combo) => {
   if (combo >= 3) return 1.5;
   return 1;
 };
+const triggerBoltChain = (state, firstTarget) => {
+  const maxChains = 4;
+  const maxDistance = 220;
+
+  state.lightningChains = state.lightningChains || [];
+
+  let current = firstTarget;
+  const hitTargets = new Set([firstTarget]);
+
+  for (let i = 0; i < maxChains; i++) {
+    let closest = null;
+    let closestDist = Infinity;
+
+    for (const target of state.targets) {
+      if (!target.alive) continue;
+      if (hitTargets.has(target)) continue;
+
+      const dx = target.x - current.x;
+      const dy = target.y - current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist <= maxDistance && dist < closestDist) {
+        closest = target;
+        closestDist = dist;
+      }
+    }
+
+    if (!closest) break;
+
+    state.lightningChains.push({
+      x1: current.x,
+      y1: current.y,
+      x2: closest.x,
+      y2: closest.y,
+      createdAt: performance.now(),
+      duration: 180,
+    });
+
+    damageTarget(state, closest, 1);
+
+    hitTargets.add(closest);
+    current = closest;
+  }
+};
 
 const damageTarget = (state, target, dmg = 1) => {
   target.hp -= dmg;
@@ -576,10 +620,14 @@ export const updatePhysics = (state, dt) => {
       const dx = a.x - t.x, dy = a.y - t.y;
       if (dx * dx + dy * dy < (t.r + 4) ** 2) {
         if (a.explosive) {
-          explodeAt(state, a.x, a.y);
-        } else {
-          damageTarget(state, t, 1);
-        }
+  explodeAt(state, a.x, a.y);
+} else {
+  damageTarget(state, t, 1);
+
+  if (state.boltActive) {
+    triggerBoltChain(state, t);
+  }
+}
         a.alive = false;
         break;
       }
