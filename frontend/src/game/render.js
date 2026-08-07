@@ -214,9 +214,9 @@ export const drawBow = (ctx, state) => {
   // Nocked arrow when charging
   if (charging) {
     const pull = chargePull;
-    ctx.fillStyle = "#d4a373";
+    ctx.fillStyle = state.nextShotItem === "bomb_arrow" ? "#111111" : "#d4a373";
     ctx.fillRect(-10 - pull * 18, -1.5, 40, 3);
-    ctx.fillStyle = "#e63946";
+    ctx.fillStyle = state.nextShotItem === "bomb_arrow" ? "#000000" : "#e63946";
     ctx.beginPath();
     ctx.moveTo(30 - pull * 18, -1.5);
     ctx.lineTo(38 - pull * 18, 0);
@@ -274,10 +274,18 @@ const drawArrow = (ctx, a) => {
   ctx.translate(a.x, a.y);
   ctx.rotate(a.rotation);
   // Shaft
-  ctx.fillStyle = a.explosive ? "#ef4444" : "#d4a373";
+  ctx.fillStyle = a.bombArrow
+  ? "#111111"
+  : a.explosive
+  ? "#ef4444"
+  : "#d4a373";
   ctx.fillRect(-22, -1.5, 44, 3);
   // Tip
-  ctx.fillStyle = a.explosive ? "#fbbf24" : "#3a2418";
+  ctx.fillStyle = a.bombArrow
+  ? "#000000"
+  : a.explosive
+  ? "#fbf24"
+  : "#3a2418";
   ctx.beginPath();
   ctx.moveTo(22, -2);
   ctx.lineTo(30, 0);
@@ -764,6 +772,40 @@ if (state.lightningChains?.length) {
   drawParticles(ctx, state);
   drawBow(ctx, state);
   drawFloatTexts(ctx, state);
+  // Bomb Arrow - dev BOMB! yazısı
+state.bombTexts = (state.bombTexts || []).filter((b) => {
+  const age = performance.now() - b.createdAt;
+  if (age >= b.duration) return false;
+
+  const progress = age / b.duration;
+  const alpha = 1 - progress;
+
+  ctx.save();
+
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // İlk anda büyüyüp ekrana vurur
+  const scale = 1 + Math.sin(progress * Math.PI) * 0.5;
+  ctx.translate(b.x, b.y);
+  ctx.scale(scale, scale);
+
+  ctx.font = "bold 64px 'Bricolage Grotesque', sans-serif";
+
+  // Kalın siyah dış çizgi
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = "#111111";
+  ctx.strokeText(b.text, 0, 0);
+
+  // Açık gri/beyaz iç kısım
+  ctx.fillStyle = "#f3f4f6";
+  ctx.fillText(b.text, 0, 0);
+
+  ctx.restore();
+
+  return true;
+});
 
   // Combo badge in top-center while active
   if (state.combo >= 3) {
