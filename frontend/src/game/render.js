@@ -252,7 +252,9 @@ drawCrystal(27, 0, 11, 0);
   drawCrystal(17, 34, 5, 0.55);
 
   ctx.restore();
-
+  
+  }
+  
   // String
   const chargeDur = getEffectiveChargeMs(state);
   const chargePull = charging ? Math.min(1, (performance.now() - state.chargeStart) / chargeDur) : 0;
