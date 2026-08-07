@@ -188,8 +188,7 @@ export const drawBow = (ctx, state) => {
     ctx.beginPath(); ctx.arc(0, 0, 48, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
-
-}
+  
   // Bow body
   ctx.strokeStyle = equippedBow.color;
   ctx.lineWidth = 6;
