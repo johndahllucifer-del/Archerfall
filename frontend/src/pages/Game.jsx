@@ -1187,7 +1187,6 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
       </div>
             {Object.values(ITEMS).map((item) => {
               const owned = state.ownedItems.includes(item.id);
-          const itemCount =
   const itemCount = state.ownedItems.filter(
         (ownedItemId) => ownedItemId === item.id
       ).length;
