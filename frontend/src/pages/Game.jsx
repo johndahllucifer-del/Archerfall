@@ -1187,14 +1187,9 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
       </div>
             {Object.values(ITEMS).map((item) => {
               const owned = state.ownedItems.includes(item.id);
-  const itemCount =
-  item.id === "bomb_arrow" ||
-  item.id === "red_laser" ||
-  item.id === "bolt"
-    ? (inventory[item.id] || 0)
-    : state.ownedItems.filter(
-        (ownedItemId) => ownedItemId === item.id
-      ).length;
+  const itemCount = state.ownedItems.filter(
+  (ownedItemId) => ownedItemId === item.id
+).length;
               const canAfford = state.coins >= item.cost;
               const Icon = item.icon;
               return (
