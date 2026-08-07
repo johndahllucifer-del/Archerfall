@@ -810,6 +810,7 @@ const useRedLaser = () => {
         onOpenChange={setShopOpen}
         state={state}
         onBuyBow={handleBuyBow}
+        inventory={inventory}
         onEquipBow={handleEquipBow}
         onBuyItem={handleBuyItem}
       />
@@ -1097,7 +1098,15 @@ const LegendChip = ({ color, label }) => (
   </div>
 );
 
-const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem }) => {
+const ShopDialog = ({
+  open,
+  onOpenChange,
+  state,
+  onBuyBow,
+  onEquipBow,
+  onBuyItem,
+  inventory,
+}) => {
   if (!state) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1187,9 +1196,14 @@ const ShopDialog = ({ open, onOpenChange, state, onBuyBow, onEquipBow, onBuyItem
       </div>
             {Object.values(ITEMS).map((item) => {
               const owned = state.ownedItems.includes(item.id);
-  const itemCount = state.ownedItems.filter(
-  (ownedItemId) => ownedItemId === item.id
-).length;
+  const itemCount =
+  item.id === "bomb_arrow" ||
+  item.id === "red_laser" ||
+  item.id === "bolt"
+    ? (inventory?.[item.id] || 0)
+    : state.ownedItems.filter(
+        (ownedItemId) => ownedItemId === item.id
+      ).length;
               const canAfford = state.coins >= item.cost;
               const Icon = item.icon;
               return (
