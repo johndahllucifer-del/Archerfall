@@ -272,6 +272,7 @@ export const releaseShot = (state, shotItem = null) => {
     }
   }
   sounds.arrowShoot();
+  return true;
 };
 
 const spawnTarget = (state) => {
