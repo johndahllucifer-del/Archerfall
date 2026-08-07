@@ -43,6 +43,7 @@ export default function Game() {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 720 });
   const [shopOpen, setShopOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
+  const [boltSecondsLeft, setBoltSecondsLeft] = useState(0);
   const [mpOpen, setMpOpen] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const [board, setBoard] = useState([]);
@@ -111,10 +112,32 @@ export default function Game() {
     clearInterval(interval);
   };
 }, []);
+  
 
 const [activeItem, setActiveItem] = useState(null);
 const [boltUntil, setBoltUntil] = useState(0);
 const [nextShotItem, setNextShotItem] = useState(null);
+  useEffect(() => {
+  if (boltUntil <= 0) {
+    setBoltSecondsLeft(0);
+    return;
+  }
+
+  const updateBoltTimer = () => {
+    const remaining = Math.max(
+      0,
+      Math.ceil((boltUntil - Date.now()) / 1000)
+    );
+
+    setBoltSecondsLeft(remaining);
+  };
+
+  updateBoltTimer();
+
+  const timer = setInterval(updateBoltTimer, 250);
+
+  return () => clearInterval(timer);
+    }, [boltUntil]);
   
   // Queue timer
   useEffect(() => {
@@ -531,6 +554,7 @@ const useRedLaser = () => {
   }));
 
   setBoltUntil(Date.now() + 10000);
+    setBoltSecondsLeft(10);
     state.boltActive = true;
 
 setTimeout(() => {
@@ -703,6 +727,23 @@ setTimeout(() => {
 >
   ⚡ Bolt ×{inventory.bolt || 0}
 </Button>
+          {boltSecondsLeft > 0 && (
+  <Badge className="bg-blue-500 text-white px-3 py-1.5 text-sm border-0">
+    ⚡ Bolt {boltSecondsLeft}s
+  </Badge>
+)}
+
+{nextShotItem === "bomb_arrow" && (
+  <Badge className="bg-orange-500 text-white px-3 py-1.5 text-sm border-0">
+    💣 Bomb READY
+  </Badge>
+)}
+
+{nextShotItem === "red_laser" && (
+  <Badge className="bg-red-500 text-white px-3 py-1.5 text-sm border-0">
+    🔴 Laser READY
+  </Badge>
+)}
           {state?.activePowerUp && (
             <Badge className="bg-gradient-to-r from-cyan-400 to-violet-500 text-white px-3 py-1.5 text-sm border-0 scale-pop" data-testid="hud-powerup">
               {state.activePowerUp.type === "triple" && <><Zap className="w-3.5 h-3.5 mr-1" />Triple x{state.activePowerUp.ammo}</>}
