@@ -728,9 +728,10 @@ setTimeout(() => {
   ⚡ Bolt ×{inventory.bolt || 0}
 </Button>
           {boltSecondsLeft > 0 && (
-  <Badge className="bg-blue-500 text-white px-3 py-1.5 text-sm border-0">
-    ⚡ Bolt {boltSecondsLeft}s
-  </Badge>
+ <Badge className="bg-gradient-to-r from-cyan-400 to-violet-500 text-white px-3 py-1.5 text-sm border-0 scale-pop">
+  <Zap className="w-3.5 h-3.5 mr-1" />
+  Bolt {boltSecondsLeft}s
+</Badge>
 )}
 
 {nextShotItem === "bomb_arrow" && (
