@@ -631,6 +631,52 @@ export const drawScene = (ctx, state, time) => {
   for (const t of state.targets) drawTarget(ctx, t, time);
   for (const d of state.drops) drawDrop(ctx, d, time);
   for (const a of state.arrows) drawArrow(ctx, a);
+  // Big Laser
+if (state.lasers?.length) {
+  state.lasers = state.lasers.filter((laser) => {
+    const age = time - laser.createdAt;
+
+    if (age > laser.duration) {
+      return false;
+    }
+
+    const alpha = 1 - age / laser.duration;
+
+    ctx.save();
+    ctx.lineCap = "round";
+
+    // Dış kırmızı parlama
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.strokeStyle = "#ff1744";
+    ctx.lineWidth = laser.width + 24;
+    ctx.beginPath();
+    ctx.moveTo(laser.x1, laser.y1);
+    ctx.lineTo(laser.x2, laser.y2);
+    ctx.stroke();
+
+    // Ana lazer
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.strokeStyle = "#ff1744";
+    ctx.lineWidth = laser.width;
+    ctx.beginPath();
+    ctx.moveTo(laser.x1, laser.y1);
+    ctx.lineTo(laser.x2, laser.y2);
+    ctx.stroke();
+
+    // Parlak beyaz merkez
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = Math.max(8, laser.width * 0.28);
+    ctx.beginPath();
+    ctx.moveTo(laser.x1, laser.y1);
+    ctx.lineTo(laser.x2, laser.y2);
+    ctx.stroke();
+
+    ctx.restore();
+
+    return true;
+  });
+}
   // Enemy projectiles (boss fireballs)
   for (const p of state.enemyProjectiles || []) {
     const flicker = Math.sin(time * 0.02 + p.t * 0.01) * 2;
