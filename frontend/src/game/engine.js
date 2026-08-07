@@ -263,8 +263,6 @@ export const releaseShot = (state, shotItem = null) => {
       bombArrow: shotItem === "bomb_arrow",
      bowId: bow.id,
      trail: [],
-      bowId: bow.id,
-      trail: [],
     });
   });
 
