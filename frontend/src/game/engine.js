@@ -171,6 +171,67 @@ export const releaseShot = (state, shotItem = null) => {
   state.power = power;
 
   const angle = state.bow.angle;
+  if (shotItem === "red_laser") {
+  const laserLength = Math.max(state.width, state.height) * 1.6;
+  const laserWidth = 55;
+
+  const startX = state.bow.x + Math.cos(angle) * 30;
+  const startY = state.bow.y + Math.sin(angle) * 30;
+
+  const endX = startX + Math.cos(angle) * laserLength;
+  const endY = startY + Math.sin(angle) * laserLength;
+
+  state.lasers = state.lasers || [];
+
+  state.lasers.push({
+    x1: startX,
+    y1: startY,
+    x2: endX,
+    y2: endY,
+    width: laserWidth,
+    createdAt: performance.now(),
+    duration: 220,
+  });
+
+  state.targets.forEach((target) => {
+    if (!target.alive) return;
+
+    const vx = endX - startX;
+    const vy = endY - startY;
+
+    const wx = target.x - startX;
+    const wy = target.y - startY;
+
+    const lengthSquared = vx * vx + vy * vy;
+
+    let t = (wx * vx + wy * vy) / lengthSquared;
+    t = Math.max(0, Math.min(1, t));
+
+    const closestX = startX + t * vx;
+    const closestY = startY + t * vy;
+
+    const dx = target.x - closestX;
+    const dy = target.y - closestY;
+
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance <= laserWidth / 2 + (target.r || 10)) {
+      damageTarget(
+        state,
+        target,
+        Math.max(1, target.hp ?? 1)
+      );
+    }
+  });
+
+  state.charging = false;
+  state.power = 0;
+  state.shake = Math.max(state.shake || 0, 10);
+
+  sounds.arrowShoot();
+
+  return true;
+}
   const isTriple = state.activePowerUp?.type === "triple" && state.activePowerUp.ammo > 0;
   const isExplosive =
     shotItem === "bomb_arrow" ||
