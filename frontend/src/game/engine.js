@@ -437,7 +437,7 @@ export const fireRedLaser = (state) => {
   state.targets.forEach((target) => {
     if (!target.alive) return;
 
-    damageTarget(state, target, Math.max(1, target.hp));
+    damageTarget(state, target, Math.max(1, target.hp ?? 1));
     hitAnyTarget = true;
   });
 
