@@ -735,14 +735,16 @@ setTimeout(() => {
 )}
 
 {nextShotItem === "bomb_arrow" && (
-  <Badge className="bg-orange-500 text-white px-3 py-1.5 text-sm border-0">
-    💣 Bomb READY
+  <Badge className="bg-gradient-to-r from-orange-400 to-red-500 text-white px-3 py-1.5 text-sm border-0 scale-pop">
+    <Bomb className="w-3.5 h-3.5 mr-1" />
+    Bomb READY
   </Badge>
 )}
 
 {nextShotItem === "red_laser" && (
-  <Badge className="bg-red-500 text-white px-3 py-1.5 text-sm border-0">
-    🔴 Laser READY
+  <Badge className="bg-gradient-to-r from-red-500 to-rose-600 text-white px-3 py-1.5 text-sm border-0 scale-pop">
+    <Flame className="w-3.5 h-3.5 mr-1" />
+    Laser READY
   </Badge>
 )}
           {state?.activePowerUp && (
