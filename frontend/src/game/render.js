@@ -188,6 +188,18 @@ export const drawBow = (ctx, state) => {
     ctx.beginPath(); ctx.arc(0, 0, 48, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
+
+}
+  // Bow body
+  ctx.strokeStyle = equippedBow.color;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(0, 0, 32, -Math.PI / 2.2, Math.PI / 2.2);
+  ctx.stroke();
+
+  // Bow grip
+  ctx.fillStyle = equippedBow.accent;
+  ctx.fillRect(-4, -10, 8, 20);
 // ===== EMERALD BOW CRYSTALS =====
 if (equippedBow.id === "emerald") {
   ctx.save();
@@ -241,17 +253,6 @@ drawCrystal(27, 0, 11, 0);
   drawCrystal(17, 34, 5, 0.55);
 
   ctx.restore();
-}
-  // Bow body
-  ctx.strokeStyle = equippedBow.color;
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.arc(0, 0, 32, -Math.PI / 2.2, Math.PI / 2.2);
-  ctx.stroke();
-
-  // Bow grip
-  ctx.fillStyle = equippedBow.accent;
-  ctx.fillRect(-4, -10, 8, 20);
 
   // String
   const chargeDur = getEffectiveChargeMs(state);
