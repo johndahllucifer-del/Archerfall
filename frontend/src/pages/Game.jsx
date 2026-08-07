@@ -454,27 +454,11 @@ const useRedLaser = () => {
     return;
   }
 
-  const fired = fireRedLaser(state);
-
-  if (!fired) {
-    toast.error("No targets to hit!");
-    return;
-  }
-
-  setInventory((prev) => ({
-    ...prev,
-    red_laser: Math.max(0, (prev.red_laser || 0) - 1),
-  }));
-
+  setNextShotItem("red_laser");
   setActiveItem("red_laser");
 
-  setTimeout(() => {
-    setActiveItem(null);
-  }, 500);
-
-  forceUpdate();
   sounds.click();
-  toast.success("🔴 Big Laser fired!");
+  toast.success("🔴 Big Laser ready! Draw the bow and fire!");
 };
   const useBolt = () => {
   const state = stateRef.current;
