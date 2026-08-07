@@ -8,7 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -64,6 +64,38 @@ async def get_status_checks():
             check['timestamp'] = datetime.fromisoformat(check['timestamp'])
     
     return status_checks
+    # ===== Online Players =====
+
+ONLINE_TIMEOUT_SECONDS = 30
+
+@api_router.post("/online/heartbeat")
+async def online_heartbeat(player_id: str):
+    now = datetime.now(timezone.utc)
+
+    await db.online_players.update_one(
+        {"player_id": player_id},
+        {
+            "$set": {
+                "player_id": player_id,
+                "last_seen": now
+            }
+        },
+        upsert=True
+    )
+
+    return {"ok": True}
+
+
+@api_router.get("/online/count")
+async def online_count():
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=ONLINE_TIMEOUT_SECONDS)
+
+    count = await db.online_players.count_documents({
+        "last_seen": {"$gte": cutoff}
+    })
+
+    return {"online": count}
 
 
 # ===== Leaderboard =====
