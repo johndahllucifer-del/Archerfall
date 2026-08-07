@@ -473,7 +473,7 @@ const explodeBombArrowAt = (state, x, y) => {
   duration: 900,
   blastRadius: 150,
 });
-
+  };
 const getComboMult = (combo) => {
   if (combo >= 12) return 5;
   if (combo >= 8) return 3;
