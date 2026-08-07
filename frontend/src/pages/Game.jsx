@@ -628,6 +628,16 @@ const useRedLaser = () => {
   <Flame className="w-4 h-4 mr-1 text-red-600" />
   Laser ×{inventory.red_laser || 0}
 </Button>
+          <Button
+  size="sm"
+  variant="outline"
+  disabled={(inventory.bolt || 0) <= 0 || status !== "playing"}
+  onClick={useBolt}
+  className="bg-white/80 border-yellow-300 btn-press"
+  data-testid="use-bolt"
+>
+  ⚡ Bolt ×{inventory.bolt || 0}
+</Button>
           {state?.activePowerUp && (
             <Badge className="bg-gradient-to-r from-cyan-400 to-violet-500 text-white px-3 py-1.5 text-sm border-0 scale-pop" data-testid="hud-powerup">
               {state.activePowerUp.type === "triple" && <><Zap className="w-3.5 h-3.5 mr-1" />Triple x{state.activePowerUp.ammo}</>}
