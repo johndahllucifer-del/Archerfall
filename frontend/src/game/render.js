@@ -908,39 +908,6 @@ state.bombTexts = (state.bombTexts || []).filter((b) => {
 
   return true;
 });
-  const age = performance.now() - b.createdAt;
-  if (age >= b.duration) return false;
-
-  const progress = age / b.duration;
-  const alpha = 1 - progress;
-
-  ctx.save();
-
-  ctx.globalAlpha = alpha;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  // İlk anda büyüyüp ekrana vurur
-  const scale = 1 + Math.sin(progress * Math.PI) * 0.5;
-  ctx.translate(b.x, b.y);
-  ctx.scale(scale, scale);
-
-  ctx.font = "bold 64px 'Bricolage Grotesque', sans-serif";
-
-  // Kalın siyah dış çizgi
-  ctx.lineWidth = 10;
-  ctx.strokeStyle = "#111111";
-  ctx.strokeText(b.text, 0, 0);
-
-  // Açık gri/beyaz iç kısım
-  ctx.fillStyle = "#f3f4f6";
-  ctx.fillText(b.text, 0, 0);
-
-  ctx.restore();
-
-  return true;
-});
-
   // Combo badge in top-center while active
   if (state.combo >= 3) {
     const mult = state.combo >= 12 ? 5 : state.combo >= 8 ? 3 : state.combo >= 5 ? 2 : 1.5;
