@@ -188,7 +188,60 @@ export const drawBow = (ctx, state) => {
     ctx.beginPath(); ctx.arc(0, 0, 48, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
+// ===== EMERALD BOW CRYSTALS =====
+if (equippedBow.id === "emerald") {
+  ctx.save();
 
+  const pulse = 0.85 + Math.sin(performance.now() * 0.006) * 0.15;
+
+  // Yeşil glow
+  ctx.shadowColor = "#22c55e";
+  ctx.shadowBlur = 14 * pulse;
+
+  const drawCrystal = (x, y, size, rotation = 0) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    ctx.fillStyle = "#10b981";
+    ctx.strokeStyle = "#a7f3d0";
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.lineTo(size * 0.55, 0);
+    ctx.lineTo(0, size);
+    ctx.lineTo(-size * 0.55, 0);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+
+    // Kristal iç parlaması
+    ctx.fillStyle = "rgba(209,250,229,0.75)";
+    ctx.beginPath();
+    ctx.moveTo(0, -size * 0.7);
+    ctx.lineTo(size * 0.18, 0);
+    ctx.lineTo(0, size * 0.25);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  };
+
+  // Ortadaki büyük zümrüt
+  drawCrystal(2, 0, 10, 0);
+
+  // Üst kol kristalleri
+  drawCrystal(8, -24, 7, -0.35);
+  drawCrystal(17, -34, 5, -0.55);
+
+  // Alt kol kristalleri
+  drawCrystal(8, 24, 7, 0.35);
+  drawCrystal(17, 34, 5, 0.55);
+
+  ctx.restore();
+}
   // Bow body
   ctx.strokeStyle = equippedBow.color;
   ctx.lineWidth = 6;
@@ -262,13 +315,46 @@ export const drawBow = (ctx, state) => {
 
 const drawArrow = (ctx, a) => {
   // Trail
-  for (let i = 0; i < a.trail.length; i++) {
-    const p = a.trail[i];
-    const alpha = (i / a.trail.length) * 0.4;
-    ctx.fillStyle = `rgba(212,163,115,${alpha})`;
+ for (let i = 0; i < a.trail.length; i++) {
+  const p = a.trail[i];
+  const alpha = (i / a.trail.length) * 0.65;
+
+  if (a.bowId === "emerald") {
+    // Emerald enerji izi
+    ctx.fillStyle = `rgba(34,197,94,${alpha})`;
+    ctx.shadowColor = "#22c55e";
+    ctx.shadowBlur = 10;
+
+    ctx.beginPath();
+    ctx.arc(
+      p.x,
+      p.y,
+      2 + (i / a.trail.length) * 2,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+
+    // Küçük zümrüt parçacıkları
+    if (i % 2 === 0) {
+      ctx.fillStyle = `rgba(167,243,208,${alpha * 0.8})`;
+      ctx.fillRect(
+        p.x - 2,
+        p.y - 4 + Math.sin(i) * 3,
+        4,
+        4
+      );
+    }
+
+    ctx.shadowBlur = 0;
+  } else {
+    // Normal yayların mevcut izi
+    ctx.fillStyle = `rgba(212,163,115,${alpha * 0.6})`;
     ctx.beginPath();
     ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
     ctx.fill();
+  }
+}
   }
   ctx.save();
   ctx.translate(a.x, a.y);
@@ -278,6 +364,8 @@ const drawArrow = (ctx, a) => {
   ? "#111111"
   : a.explosive
   ? "#ef4444"
+  : a.bowId === "emerald"
+  ? "#065f46"
   : "#d4a373";
   ctx.fillRect(-22, -1.5, 44, 3);
   // Tip
@@ -285,6 +373,8 @@ const drawArrow = (ctx, a) => {
   ? "#000000"
   : a.explosive
   ? "#fbf24"
+  : a.bowId === "emerald"
+  ? "#10b981"
   : "#3a2418";
   ctx.beginPath();
   ctx.moveTo(22, -2);
