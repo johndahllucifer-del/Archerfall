@@ -40,7 +40,7 @@ export default function Game() {
     return v ? parseInt(v, 10) : 0;
   });
   const [soundOn, setSoundOn] = useState(true);
-  const [dimensions, setDimensions] = useState({ width: 1200, height: 720 });
+  const [dimensions] = useState({ width: 1400, height: 760 });
   const [shopOpen, setShopOpen] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
   const [boltSecondsLeft, setBoltSecondsLeft] = useState(0);
@@ -152,16 +152,7 @@ const [nextShotItem, setNextShotItem] = useState(null);
 
   return () => clearInterval(timer);
 }, [queueOpen]);
-  useEffect(() => {
-    const compute = () => {
-      const w = Math.min(1400, window.innerWidth - 32);
-      const h = Math.min(820, window.innerHeight - 140);
-      setDimensions({ width: w, height: Math.max(480, h) });
-    };
-    compute();
-    window.addEventListener("resize", compute);
-    return () => window.removeEventListener("resize", compute);
-  }, []);
+  
   useEffect(() => {
   localStorage.setItem("archerfall_inventory_v1", JSON.stringify(inventory));
 }, [inventory]);
@@ -773,12 +764,23 @@ setTimeout(() => {
         </div>
 
         {/* Canvas wrapper */}
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white" style={{ width: dimensions.width, maxWidth: "100%" }}>
-          <canvas
-            ref={canvasRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            className="game-canvas touch-none"
+        <div
+  className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white mx-auto"
+  style={{
+    width: "100%",
+    maxWidth: `${dimensions.width}px`,
+  }}
+>
+         <canvas
+  ref={canvasRef}
+  width={dimensions.width}
+  height={dimensions.height}
+  className="game-canvas touch-none block"
+  style={{
+    width: "100%",
+    height: "auto",
+    aspectRatio: `${dimensions.width} / ${dimensions.height}`,
+  }}
             onMouseMove={onMouseMove}
             onMouseDown={onMouseDown}
             onMouseUp={onMouseUp}
