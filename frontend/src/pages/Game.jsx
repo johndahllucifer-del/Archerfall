@@ -582,7 +582,7 @@ setTimeout(() => {
     >
       <div className="max-w-[1440px] mx-auto px-4 pt-4 pb-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center shadow-md">
               <TargetIcon className="w-6 h-6 text-white" strokeWidth={2.5} />
@@ -594,7 +594,7 @@ setTimeout(() => {
               <p className="text-xs text-slate-500 -mt-1">Aim. Charge. Release.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100/90 border border-amber-200 shadow-sm" data-testid="header-coins">
               <Coins className="w-4 h-4 text-amber-600" />
               <span className="font-mono-game text-sm font-bold text-amber-700">{state?.coins ?? 0}</span>
@@ -624,7 +624,8 @@ setTimeout(() => {
               onClick={() => { sounds.click(); setShopOpen(true); }}
               data-testid="open-shop-button"
             >
-              <ShoppingBag className="w-4 h-4 mr-1" /> Shop
+              <ShoppingBag className="w-4 h-4 sm:mr-1" />
+               <span className="hidden sm:inline">Shop</span>
             </Button>
             <Button
               size="sm"
@@ -633,7 +634,8 @@ setTimeout(() => {
               onClick={() => { sounds.click(); refreshLeaderboard(); setBoardOpen(true); }}
               data-testid="open-leaderboard-button"
             >
-              <Medal className="w-4 h-4 mr-1" /> Leaderboard
+             <Medal className="w-4 h-4 sm:mr-1" />
+           <span className="hidden sm:inline">Leaderboard</span>
             </Button>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur border border-white shadow-sm">
               <Trophy className="w-4 h-4 text-amber-500" />
